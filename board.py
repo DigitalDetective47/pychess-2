@@ -2,8 +2,6 @@ from enum import Enum, Flag
 from enum import auto as enum_gen
 from typing import Any, Final, Optional, Sequence, SupportsIndex
 
-import pieces
-
 
 class Color(Enum):
     "A player color."
@@ -28,15 +26,9 @@ class CastlingRights(Flag):
 class Coordinate:
     "A location on a board."
 
-    def __init__(
-        self, position: str | Sequence[SupportsIndex], zero_index: Optional[bool] = None
-    ) -> None:
+    def __init__(self, position: str | Sequence[SupportsIndex]) -> None:
         if isinstance(position, str):
-            if zero_index is not None:
-                raise TypeError(
-                    "argument zero_index should not be given if position is of type str"
-                )
-            elif not 2 <= len(position) < 4:
+            if not 2 <= len(position) < 4:
                 raise ValueError(
                     "argument position must be of length 2 or 3 (not "
                     + str(len(position))
@@ -55,7 +47,7 @@ class Coordinate:
                     + ")"
                 )
             pos_value: tuple[int, int] = (
-                ord(position[0]) - 97, int(position[1:]))
+                ord(position[0]) - 97, int(position[1:]) - 1)
         elif isinstance(position, Sequence):
             if len(position) != 2:
                 raise ValueError(
@@ -76,50 +68,38 @@ class Coordinate:
                     + ")"
                 )
             pos_value: tuple[int, int] = (
-                position[0].__index__() - (not zero_index),
-                position[1].__index__() - (not zero_index),
-            )
-            if not 0 <= self.pos[0] < 26:
+                position[0].__index__(), position[1].__index__())
+            if not 0 <= pos_value[0] < 26:
                 raise IndexError(
-                    "file index must be between 0 and 25 (not " +
-                    str(self.pos[0]) + ")"
-                    if zero_index
-                    else "file index must be between 1 and 26 (not "
-                    + str(self.pos[0] + 1)
-                    + ")"
-                )
-            elif not 0 <= self.pos[1] < 26:
+                    "file index must be between 0 and 25 (not " + str(pos_value[0]) + ")")
+            elif not 0 <= pos_value[1] < 26:
                 raise IndexError(
-                    "rank index must be between 0 and 25 (not " +
-                    str(self.pos[1]) + ")"
-                    if zero_index
-                    else "rank index must be between 1 and 26 (not "
-                    + str(self.pos[1] + 1)
-                    + ")"
-                )
+                    "rank index must be between 0 and 25 (not " + str(pos_value[1]) + ")")
         else:
             raise TypeError(
                 "argument position must be of type str or Sequence (not "
                 + type(position).__name__
                 + ")"
             )
+        self.file: Final[int] = pos_value[0]
         self.pos: Final[tuple[int, int]] = pos_value
+        self.rank: Final[int] = pos_value[1]
 
     def __add__(self, other):
         if (
             isinstance(other, Sequence)
             and len(other) == 2
             and isinstance(other[0], SupportsIndex)
-            and -26 <= other[0].__index__() < 27
+            and -25 <= other[0].__index__() < 26
             and isinstance(other[1], SupportsIndex)
-            and -26 <= other[1].__index__() < 27
+            and -25 <= other[1].__index__() < 26
         ):
             coords: tuple[int, int] = (
                 self.pos[0] + other[0].__index__(),
                 self.pos[1] + other[1].__index__(),
             )
-            if 0 <= coords[0] < 27 and 0 <= coords[1] < 27:
-                return Coordinate(coords, True)
+            if 0 <= coords[0] < 26 and 0 <= coords[1] < 26:
+                return Coordinate(coords)
             raise IndexError("coordinate offset out of bounds")
         return NotImplemented
 
@@ -144,9 +124,12 @@ class Coordinate:
 
 
 class Board:
+    default_piece_table: dict[str, type] = {}
+
     def __init__(
         self,
         fen: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        piece_table: dict[str, type] = default_piece_table,
         **ex_attributes
     ) -> None:
         if not isinstance(fen, str):
@@ -157,7 +140,7 @@ class Board:
         if len(fen_components) != 6:
             raise ValueError("fen parameter is not valid fen")
         rank_data: Final[list[str]] = fen_components[0].split("/")
-        self.ranks: Final[int] = len(rank_data) + 1
+        self.ranks: Final[int] = len(rank_data)
         if self.ranks > 26:
             raise ValueError("board cannot have more than 26 ranks")
         num_files: int = -1
@@ -173,8 +156,13 @@ class Board:
                     if digit_buffer:
                         file += int(digit_buffer)
                         digit_buffer = ""
-                    # Add a piece to the board
+                    pos: Coordinate = Coordinate((file, rank))
+                    self.piece_array[pos] = piece_table[char.upper()](
+                        pos, Color.BLACK if char.islower() else Color.WHITE, self)
                     file += 1
+            if digit_buffer:
+                file += int(digit_buffer)
+                digit_buffer = ""
             if file != num_files:
                 if num_files == -1:
                     num_files = file
@@ -208,3 +196,10 @@ class Board:
         self.halfmove_clock: int = int(fen_components[4])
         self.fullmove_clock: int = int(fen_components[5])
         self.ex_attributes: dict[str, Any] = ex_attributes
+
+
+import pieces  # nopep8
+
+Board.default_piece_table.update({"A": pieces.Amazon, "B": pieces.Bishop, "C": pieces.Princess, "K": pieces.King,
+                                 "M": pieces.Empress, "N": pieces.Knight, "P": pieces.Pawn, "Q": pieces.Queen, "R": pieces.Rook, "S": pieces.Nightrider})
+del Board.default_piece_table

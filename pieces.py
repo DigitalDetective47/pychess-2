@@ -15,8 +15,7 @@ class Piece:
         if not isinstance(position, board.Coordinate):
             raise TypeError(
                 "position must be of type Coordinate (not "
-                + type(position).__name__
-                + ")"
+                + type(position).__name__ + ")"
             )
         elif not isinstance(color, board.Color):
             raise TypeError(
@@ -32,8 +31,11 @@ class Piece:
         self.color: Final[board.Color] = color
         self.board: board.Board = board_ref
 
-    def move(self, dest: board.Coordinate):
+    def move(self, dest: board.Coordinate, promotion: Optional[type] = None):
         "Moves the piece to the given destination, and returns the piece that was captured, if any."
+        if not (promotion is None or issubclass(promotion, Piece)):
+            raise TypeError(
+                "promotion must be a piece class if specified (not " + type(promotion).__name__ + ")")
         self.board.en_passant = None
         self.board.halfmove_clock += 1
         self.board.turn = self.board.turn.next()
@@ -43,8 +45,12 @@ class Piece:
         except KeyError:
             captured_piece = None
         del self.board.piece_array[self.pos]
-        self.pos = dest
-        self.board.piece_array[dest] = self
+        if promotion is None:
+            self.pos = dest
+            self.board.piece_array[dest] = self
+        else:
+            self.board.piece_array[dest] = promotion(
+                dest, self.color, self.board)
         return captured_piece
 
     def moves(self) -> frozenset[board.Coordinate]:
@@ -62,7 +68,7 @@ def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
         )
     try:
         test_pos: board.Coordinate = piece.pos + step
-        if test_pos[0] >= piece.board.files or test_pos[1] >= piece.board.ranks:
+        if test_pos.file >= piece.board.files or test_pos.rank >= piece.board.ranks:
             raise IndexError
         return frozenset({test_pos})
     except IndexError:
@@ -82,7 +88,7 @@ def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
     while True:
         try:
             test_pos += step
-            if test_pos[0] >= piece.board.files or test_pos[1] >= piece.board.ranks:
+            if test_pos.file >= piece.board.files or test_pos.rank >= piece.board.ranks:
                 raise IndexError
         except IndexError:
             return frozenset(positions)
@@ -123,9 +129,19 @@ def sym_ride(
     )
 
 
+class Amazon(Piece):
+    def moves(self) -> frozenset[board.Coordinate]:
+        return sym_ride(self, (1, 0)) | sym_ride(self, (1, 1)) | sym_leap(self, (2, 1))
+
+
 class Bishop(Piece):
     def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 1))
+
+
+class Empress(Piece):
+    def moves(self) -> frozenset[board.Coordinate]:
+        return sym_ride(self, (1, 0)) | sym_leap(self, (2, 1))
 
 
 class King(Piece):
@@ -138,16 +154,60 @@ class Knight(Piece):
         return sym_leap(self, (2, 1))
 
 
+class Nightrider(Piece):
+    def moves(self) -> frozenset[board.Coordinate]:
+        return sym_ride(self, (2, 1))
+
+
 class Pawn(Piece):
+    def move(self, dest: board.Coordinate, promotion: Optional[type] = None) -> Optional[Piece]:
+        if not (promotion is None or issubclass(promotion, Piece)):
+            raise TypeError(
+                "promotion must be a piece class if specified (not " + type(promotion).__name__ + ")")
+        self.board.en_passant = dest + \
+            (0, -1 if self.color == board.Color.WHITE else 1) if abs(
+                self.pos.rank - dest.rank) == 2 else None
+        self.board.halfmove_clock += 1
+        self.board.turn = self.board.turn.next()
+        self.board.fullmove_clock += self.board.turn == self.board.first_player
+        try:
+            captured_piece: Optional[Piece] = self.board.piece_array[dest]
+        except KeyError:
+            captured_piece = None
+        del self.board.piece_array[self.pos]
+        if promotion is None:
+            self.pos = dest
+            self.board.piece_array[dest] = self
+        else:
+            self.board.piece_array[dest] = promotion(
+                dest, self.color, self.board)
+        return captured_piece
+
     def moves(self) -> frozenset[board.Coordinate]:
         legal_moves: set[board.Coordinate] = set()
         test_pos: board.Coordinate
         match self.color:
             case board.Color.WHITE:
                 try:
-                    test_pos = self.pos + (-1, 1)
-                    if test_pos[0] >= self.board.files or test_pos[1] >= self.board.ranks:
+                    test_pos = self.pos + (0, 1)
+                    if test_pos.rank >= self.board.ranks:
                         raise IndexError
+                except IndexError:
+                    return frozenset()
+                if test_pos not in self.board.piece_array:
+                    legal_moves.add(test_pos)
+                    if self.pos.rank == WHITE_PAWN_RANK:
+                        try:
+                            test_pos += (0, 1)
+                            if test_pos.rank >= self.board.ranks:
+                                raise IndexError
+                        except IndexError:
+                            pass
+                        else:
+                            if test_pos not in self.board.piece_array:
+                                legal_moves.add(test_pos)
+                try:
+                    test_pos = self.pos + (-1, 1)
                 except IndexError:
                     pass
                 else:
@@ -155,25 +215,30 @@ class Pawn(Piece):
                         legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (1, 1)
-                    if test_pos[0] >= self.board.files or test_pos[1] >= self.board.ranks:
+                    if test_pos.file >= self.board.files:
                         raise IndexError
                 except IndexError:
                     pass
                 else:
                     if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
                         legal_moves.add(test_pos)
-                test_pos = self.pos + (0, 1)
-                if test_pos not in self.board.piece_array:
-                    legal_moves.add(test_pos)
-                    if self.pos.pos[1] == WHITE_PAWN_RANK:
-                        test_pos += (0, 1)
-                        if test_pos not in self.board.piece_array:
-                            legal_moves.add(test_pos)
             case board.Color.BLACK:
                 try:
+                    test_pos = self.pos + (0, -1)
+                except IndexError:
+                    return frozenset()
+                if test_pos not in self.board.piece_array:
+                    legal_moves.add(test_pos)
+                    if self.pos.rank == BLACK_PAWN_RANK:
+                        try:
+                            test_pos += (0, -1)
+                        except IndexError:
+                            pass
+                        else:
+                            if test_pos not in self.board.piece_array:
+                                legal_moves.add(test_pos)
+                try:
                     test_pos = self.pos + (-1, -1)
-                    if test_pos[0] >= self.board.files or test_pos[1] >= self.board.ranks:
-                        raise IndexError
                 except IndexError:
                     pass
                 else:
@@ -181,21 +246,19 @@ class Pawn(Piece):
                         legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (1, -1)
-                    if test_pos[0] >= self.board.files or test_pos[1] >= self.board.ranks:
+                    if test_pos.file >= self.board.files:
                         raise IndexError
                 except IndexError:
                     pass
                 else:
                     if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
                         legal_moves.add(test_pos)
-                test_pos = self.pos + (0, -1)
-                if test_pos not in self.board.piece_array:
-                    legal_moves.add(test_pos)
-                    if self.pos.pos[1] == BLACK_PAWN_RANK:
-                        test_pos += (0, -1)
-                        if test_pos not in self.board.piece_array:
-                            legal_moves.add(test_pos)
         return frozenset(legal_moves)
+
+
+class Princess(Piece):
+    def moves(self) -> frozenset[board.Coordinate]:
+        return sym_ride(self, (1, 1)) | sym_leap(self, (2, 1))
 
 
 class Queen(Piece):
