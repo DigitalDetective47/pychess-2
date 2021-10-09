@@ -128,7 +128,7 @@ class Board:
 
     def __init__(
         self,
-        fen: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        fen: str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1",
         piece_table: dict[str, type] = default_piece_table,
         **ex_attributes
     ) -> None:
@@ -158,7 +158,7 @@ class Board:
                         digit_buffer = ""
                     pos: Coordinate = Coordinate((file, rank))
                     self.piece_array[pos] = piece_table[char.upper()](
-                        pos, Color.BLACK if char.islower() else Color.WHITE, self)
+                        pos, Color.BLACK if char.islower() else (Color.WHITE if char.isupper() else Color.NEUTRAL), self)
                     file += 1
             if digit_buffer:
                 file += int(digit_buffer)
