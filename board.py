@@ -201,5 +201,5 @@ class Board:
 import pieces  # nopep8
 
 Board.default_piece_table.update({"A": pieces.Amazon, "B": pieces.Bishop, "C": pieces.Princess, "K": pieces.King,
-                                 "M": pieces.Empress, "N": pieces.Knight, "P": pieces.Pawn, "Q": pieces.Queen, "R": pieces.Rook, "S": pieces.Nightrider})
+                                 "M": pieces.Empress, "N": pieces.Knight, "P": pieces.Pawn, "Q": pieces.Queen, "R": pieces.Rook, "S": pieces.Nightrider, "-": pieces.Piece})
 del Board.default_piece_table
