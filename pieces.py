@@ -15,17 +15,16 @@ class Piece:
         if not isinstance(position, board.Coordinate):
             raise TypeError(
                 "position must be of type Coordinate (not "
-                + type(position).__name__ + ")"
+                + type(position).__name__
+                + ")"
             )
         elif not isinstance(color, board.Color):
             raise TypeError(
-                "color must be of type Color (not " +
-                type(color).__name__ + ")"
+                "color must be of type Color (not " + type(color).__name__ + ")"
             )
         elif not isinstance(board_ref, board.Board):
             raise TypeError(
-                "board_ref must be of type Board (not " +
-                type(board_ref).__name__ + ")"
+                "board_ref must be of type Board (not " + type(board_ref).__name__ + ")"
             )
         self.pos: board.Coordinate = position
         self.color: Final[board.Color] = color
@@ -35,7 +34,10 @@ class Piece:
         "Moves the piece to the given destination, and returns the piece that was captured, if any."
         if not (promotion is None or issubclass(promotion, Piece)):
             raise TypeError(
-                "promotion must be a piece class if specified (not " + type(promotion).__name__ + ")")
+                "promotion must be a piece class if specified (not "
+                + type(promotion).__name__
+                + ")"
+            )
         self.board.en_passant = None
         self.board.halfmove_clock += 1
         self.board.turn = self.board.turn.next()
@@ -49,8 +51,7 @@ class Piece:
             self.pos = dest
             self.board.piece_array[dest] = self
         else:
-            self.board.piece_array[dest] = promotion(
-                dest, self.color, self.board)
+            self.board.piece_array[dest] = promotion(dest, self.color, self.board)
         return captured_piece
 
     def moves(self) -> frozenset[board.Coordinate]:
@@ -160,27 +161,46 @@ class Nightrider(Piece):
 
 
 class Pawn(Piece):
-    def move(self, dest: board.Coordinate, promotion: Optional[type] = None) -> Optional[Piece]:
+    def move(
+        self, dest: board.Coordinate, promotion: Optional[type] = None
+    ) -> Optional[Piece]:
         if not (promotion is None or issubclass(promotion, Piece)):
             raise TypeError(
-                "promotion must be a piece class if specified (not " + type(promotion).__name__ + ")")
-        self.board.en_passant = dest + \
-            (0, -1 if self.color == board.Color.WHITE else 1) if abs(
-                self.pos.rank - dest.rank) == 2 else None
+                "promotion must be a piece class if specified (not "
+                + type(promotion).__name__
+                + ")"
+            )
         self.board.halfmove_clock += 1
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
-        try:
-            captured_piece: Optional[Piece] = self.board.piece_array[dest]
-        except KeyError:
-            captured_piece = None
+        if dest == self.board.en_passant:
+            capture_location: Final[board.Coordinate] = dest + (
+                0,
+                -1 if self.color == board.Color.WHITE else 1,
+            )
+            try:
+                captured_piece: Optional[Piece] = self.board.piece_array[
+                    capture_location
+                ]
+                del self.board.piece_array[capture_location]
+            except KeyError:
+                captured_piece = None
+        else:
+            try:
+                captured_piece: Optional[Piece] = self.board.piece_array[dest]
+            except KeyError:
+                captured_piece = None
+            self.board.en_passant = (
+                dest + (0, -1 if self.color == board.Color.WHITE else 1)
+                if abs(self.pos.rank - dest.rank) == 2
+                else None
+            )
         del self.board.piece_array[self.pos]
         if promotion is None:
             self.pos = dest
             self.board.piece_array[dest] = self
         else:
-            self.board.piece_array[dest] = promotion(
-                dest, self.color, self.board)
+            self.board.piece_array[dest] = promotion(dest, self.color, self.board)
         return captured_piece
 
     def moves(self) -> frozenset[board.Coordinate]:
