@@ -175,7 +175,7 @@ class Board:
         num_files: int = -1
         digit_buffer: str = ""
         file: int
-        self.piece_array: dict[Coordinate, pieces.Piece] = {}
+        self.piece_array: dict[Coordinate, Any] = {}
         for rank in range(self.ranks):
             file = 0
             for char in rank_data[rank]:
@@ -318,7 +318,6 @@ class Board:
             + "\n"
         )
         checker_rank: int
-        current_piece: pieces.Piece
         current_rank_label: str
         for rank in range(self.ranks)[perspective_ordering][::-1]:
             current_rank_label = str(rank + 1).rjust(rank_label_length) + "|"
@@ -347,31 +346,5 @@ class Board:
         return board_str
 
 
-import pieces
 
-STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
-    "A": pieces.Amazon,
-    "B": pieces.Bishop,
-    "C": pieces.Princess,
-    "K": pieces.King,
-    "N": pieces.Knight,
-    "M": pieces.Empress,
-    "P": pieces.Pawn,
-    "Q": pieces.Queen,
-    "R": pieces.Rook,
-    "S": pieces.Nightrider,
-    "-": pieces.Piece,
-}
-STANDARD_PIECE_SYMBOLS: Final[dict[type, dict[Color, str]]] = {
-    pieces.Amazon: {Color.WHITE: "A", Color.BLACK: "a"},
-    pieces.Bishop: {Color.WHITE: "B", Color.BLACK: "b"},
-    pieces.Empress: {Color.WHITE: "M", Color.BLACK: "m"},
-    pieces.King: {Color.WHITE: "K", Color.BLACK: "k"},
-    pieces.Knight: {Color.WHITE: "N", Color.BLACK: "n"},
-    pieces.Nightrider: {Color.WHITE: "S", Color.BLACK: "s"},
-    pieces.Pawn: {Color.WHITE: "P", Color.BLACK: "p"},
-    pieces.Piece: {Color.NEUTRAL: " "},
-    pieces.Princess: {Color.WHITE: "C", Color.BLACK: "c"},
-    pieces.Queen: {Color.WHITE: "Q", Color.BLACK: "q"},
-    pieces.Rook: {Color.WHITE: "R", Color.BLACK: "r"},
-}
+

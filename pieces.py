@@ -1,6 +1,7 @@
 from typing import Final, Optional, Sequence, SupportsIndex
 
 import board
+import settings
 
 # These values are placeholders that should be defined in the variant structure once it is created.
 # !!! DO NOT LEAVE THESE HERE !!!
@@ -20,7 +21,7 @@ class Piece:
             )
         elif not isinstance(color, board.Color):
             raise TypeError(
-                "color must be of type Color (not " + type(color).__name__ + ")"
+                "color must be of type board.Color (not " + type(color).__name__ + ")"
             )
         elif not isinstance(board_ref, board.Board):
             raise TypeError(
@@ -289,3 +290,90 @@ class Queen(Piece):
 class Rook(Piece):
     def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 0))
+
+
+STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
+    "A": Amazon,
+    "B": Bishop,
+    "C": Princess,
+    "K": King,
+    "N": Knight,
+    "M": Empress,
+    "P": Pawn,
+    "Q": Queen,
+    "R": Rook,
+    "S": Nightrider,
+    "-": Piece,
+}
+STANDARD_PIECE_SYMBOLS: Final[
+    dict[settings.CharSet, dict[type, dict[board.Color, str]]]
+] = {
+    settings.CharSet.ASCII: {
+        Amazon: {board.Color.WHITE: "A", board.Color.BLACK: "a"},
+        Bishop: {board.Color.WHITE: "B", board.Color.BLACK: "b"},
+        Empress: {board.Color.WHITE: "M", board.Color.BLACK: "m"},
+        King: {board.Color.WHITE: "K", board.Color.BLACK: "k"},
+        Knight: {board.Color.WHITE: "N", board.Color.BLACK: "n"},
+        Nightrider: {board.Color.WHITE: "S", board.Color.BLACK: "s"},
+        Pawn: {board.Color.WHITE: "P", board.Color.BLACK: "p"},
+        Piece: {board.Color.NEUTRAL: " "},
+        Princess: {board.Color.WHITE: "C", board.Color.BLACK: "c"},
+        Queen: {board.Color.WHITE: "Q", board.Color.BLACK: "q"},
+        Rook: {board.Color.WHITE: "R", board.Color.BLACK: "r"},
+    },
+    settings.CharSet.EXTENDED: {
+        Amazon: {board.Color.WHITE: "\uFF21", board.Color.BLACK: "\uFF41"},
+        Bishop: {board.Color.WHITE: "\u2657", board.Color.BLACK: "\u265D"},
+        Empress: {board.Color.WHITE: "\uFF2D", board.Color.BLACK: "\uFF2D"},
+        King: {board.Color.WHITE: "\u2654", board.Color.BLACK: "\u265A"},
+        Knight: {board.Color.WHITE: "\u2658", board.Color.BLACK: "\u265E"},
+        Nightrider: {board.Color.WHITE: "\uFF33", board.Color.BLACK: "\uFF53"},
+        Pawn: {board.Color.WHITE: "\u2659", board.Color.BLACK: "\u265F"},
+        Piece: {board.Color.NEUTRAL: "\u3000"},
+        Princess: {board.Color.WHITE: "\uFF23", board.Color.BLACK: "\uFF43"},
+        Queen: {board.Color.WHITE: "\u2655", board.Color.BLACK: "\u265B"},
+        Rook: {board.Color.WHITE: "\u2657", board.Color.BLACK: "\u265C"},
+    },
+    settings.CharSet.FULL: {
+        Amazon: {board.Color.WHITE: "\U0001FA4E", board.Color.BLACK: "\U0001FA51"},
+        Bishop: {
+            board.Color.NEUTRAL: "\U0001FA03",
+            board.Color.WHITE: "\u2657",
+            board.Color.BLACK: "\u265D",
+        },
+        Empress: {board.Color.WHITE: "\U0001FA4F", board.Color.BLACK: "\U0001FA52"},
+        King: {
+            board.Color.NEUTRAL: "\U0001FA00",
+            board.Color.WHITE: "\u2654",
+            board.Color.BLACK: "\u265A",
+        },
+        Knight: {
+            board.Color.NEUTRAL: "\U0001FA04",
+            board.Color.WHITE: "\u2658",
+            board.Color.BLACK: "\u265E",
+        },
+        Nightrider: {
+            board.Color.NEUTRAL: "\U0001FA2E",
+            board.Color.WHITE: "\U0001FA22",
+            board.Color.BLACK: "\U0001FA20",
+        },
+        Pawn: {
+            board.Color.NEUTRAL: "\U0001FA05",
+            board.Color.WHITE: "\u2659",
+            board.Color.BLACK: "\u265F",
+        },
+        Piece: {board.Color.NEUTRAL: "\u3000"},
+        Princess: {board.Color.WHITE: "\U0001FA50", board.Color.BLACK: "\U0001FA53"},
+        Queen: {
+            board.Color.NEUTRAL: "\U0001FA01",
+            board.Color.WHITE: "\u2655",
+            board.Color.BLACK: "\u265B",
+        },
+        Rook: {
+            board.Color.NEUTRAL: "\U0001FA02",
+            board.Color.WHITE: "\u2657",
+            board.Color.BLACK: "\u265C",
+        },
+    },
+}
+print(STANDARD_PIECE_SYMBOLS)
