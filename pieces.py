@@ -376,4 +376,3 @@ STANDARD_PIECE_SYMBOLS: Final[
         },
     },
 }
-print(STANDARD_PIECE_SYMBOLS)
