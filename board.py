@@ -27,6 +27,9 @@ class Color(Enum):
         return {Color.WHITE: Color.BLACK, Color.BLACK: Color.WHITE}[self]
 
 
+PLAYER_COLORS: Final[frozenset[Color]] = frozenset({Color.WHITE, Color.BLACK})
+
+
 class CastlingRights(Flag):
     NONE = 0
     WHITE_KINGSIDE = enum_gen()
@@ -141,7 +144,13 @@ class Coordinate:
 
 
 class Board:
-    def __init__(self, fen: str, piece_table: dict[str, type], **ex_attributes) -> None:
+    def __init__(
+        self,
+        fen: str,
+        piece_table: dict[str, type],
+        pawn_ranks: dict[Color, SupportsIndex] = {},
+        **ex_attributes
+    ) -> None:
         if not isinstance(fen, str):
             raise TypeError(
                 "fen must be of type string (not " + type(fen).__name__ + ")"
@@ -170,6 +179,29 @@ class Board:
             raise ValueError("fen parameter is not valid fen")
         rank_data: Final[list[str]] = fen_components[0].split("/")[::-1]
         self.ranks: Final[int] = len(rank_data)
+        if not (pawn_ranks is None or isinstance(pawn_ranks, dict)):
+            raise TypeError(
+                "pawn_ranks must be of type dict if specified (not "
+                + type(pawn_ranks).__name__
+                + ")"
+            )
+        for color, rank in pawn_ranks.items():
+            if not isinstance(color, Color):
+                raise TypeError(
+                    "keys of pawn_ranks must be of type Color (not "
+                    + type(color).__name__
+                    + ")"
+                )
+            elif color not in PLAYER_COLORS:
+                raise ValueError(
+                    "keys of pawn_ranks must be either Color.WHITE or Color.BLACK (not Color."
+                    + color.name
+                    + ")"
+                )
+            elif not isinstance(rank, SupportsIndex):
+                raise TypeError("values of pawn_ranks must have an index property")
+            elif 0 <= rank.__index__() < self.ranks:
+                raise ValueError("values of pawn_ranks must be within the board")
         if self.ranks > 26:
             raise ValueError("board cannot have more than 26 ranks")
         num_files: int = -1
@@ -236,6 +268,21 @@ class Board:
         )
         self.halfmove_clock: int = int(fen_components[4])
         self.fullmove_clock: int = int(fen_components[5])
+        pawn_ranks_mem: dict[Color, int]
+        match pawn_ranks:
+            case {}:
+                pawn_ranks_mem = {Color.WHITE: 1, Color.BLACK: self.ranks - 2}
+            case {Color.WHITE: white_pawn_rank}:
+                pawn_ranks_mem = pawn_ranks | {Color.BLACK: self.ranks - 1 - white_pawn_rank}
+            case {Color.BLACK: black_pawn_rank}:
+                pawn_ranks_mem = {Color.WHITE: self.ranks - 1 - black_pawn_rank} | pawn_ranks
+            case {Color.WHITE: _, Color.BLACK: _}:
+                pawn_ranks_mem = pawn_ranks
+            case _:
+                raise ValueError(
+                    "severely malformed pawn_ranks dict (this error should not be able to appear, even in user code)"
+                )
+        self.pawn_ranks: Final[dict[Color, int]] = pawn_ranks_mem
         self.ex_attributes: dict[str, Any] = ex_attributes
 
     def render(
@@ -288,7 +335,7 @@ class Board:
             raise TypeError(
                 "fullwidth must be of type bool (not " + type(fullwidth).__name__ + ")"
             )
-        elif perspective not in {Color.WHITE, Color.BLACK}:
+        elif perspective not in PLAYER_COLORS:
             raise ValueError(
                 "perspective must be either Color.WHITE or Color.BLACK (not "
                 + str(perspective)
@@ -329,7 +376,9 @@ class Board:
                     current_piece = self.piece_array[Coordinate((file, rank))]
                 except KeyError:
                     checker_rank = rank % len(checker_list)
-                    board_str += checker_list[checker_rank][file % len(checker_list[checker_rank])]
+                    board_str += checker_list[checker_rank][
+                        file % len(checker_list[checker_rank])
+                    ]
                 else:
                     board_str += piece_symbols[type(current_piece)][current_piece.color]
             current_rank_label = "|" + str(rank + 1)
@@ -344,7 +393,3 @@ class Board:
             + file_labels
         )
         return board_str
-
-
-
-

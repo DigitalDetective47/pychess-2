@@ -3,11 +3,6 @@ from typing import Final, Optional, Sequence, SupportsIndex
 import board
 import settings
 
-# These values are placeholders that should be defined in the variant structure once it is created.
-# !!! DO NOT LEAVE THESE HERE !!!
-WHITE_PAWN_RANK: Final[int] = 1
-BLACK_PAWN_RANK: Final[int] = 6
-
 
 class Piece:
     def __init__(
@@ -217,7 +212,7 @@ class Pawn(Piece):
                     return frozenset()
                 if test_pos not in self.board.piece_array:
                     legal_moves.add(test_pos)
-                    if self.pos.rank == WHITE_PAWN_RANK:
+                    if self.pos.rank == self.board.pawn_ranks[board.Color.WHITE]:
                         try:
                             test_pos += (0, 1)
                             if test_pos.rank >= self.board.ranks:
@@ -250,7 +245,7 @@ class Pawn(Piece):
                     return frozenset()
                 if test_pos not in self.board.piece_array:
                     legal_moves.add(test_pos)
-                    if self.pos.rank == BLACK_PAWN_RANK:
+                    if self.pos.rank == self.board.pawn_ranks[board.Color.BLACK]:
                         try:
                             test_pos += (0, -1)
                         except IndexError:
