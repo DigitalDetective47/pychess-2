@@ -21,7 +21,7 @@ class Piece:
             )
         elif not isinstance(color, board.Color):
             raise TypeError(
-                "color must be of type board.Color (not " + type(color).__name__ + ")"
+                "color must be of type Color (not " + type(color).__name__ + ")"
             )
         elif not isinstance(board_ref, board.Board):
             raise TypeError(
