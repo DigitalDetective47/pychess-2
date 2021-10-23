@@ -212,73 +212,73 @@ class Pawn(Piece):
     def moves(self) -> frozenset[board.Coordinate]:
         legal_moves: set[board.Coordinate] = set()
         test_pos: board.Coordinate
-        # match self.color:
-        #     case board.Color.WHITE:
-        #         try:
-        #             test_pos = self.pos + (0, 1)
-        #             if test_pos.rank >= self.board.ranks:
-        #                 raise IndexError
-        #         except IndexError:
-        #             return frozenset()
-        #         if test_pos not in self.board.piece_array:
-        #             legal_moves.add(test_pos)
-        #             if self.pos.rank == self.board.pawn_ranks[board.Color.WHITE]:
-        #                 try:
-        #                     test_pos += (0, 1)
-        #                     if test_pos.rank >= self.board.ranks:
-        #                         raise IndexError
-        #                 except IndexError:
-        #                     pass
-        #                 else:
-        #                     if test_pos not in self.board.piece_array:
-        #                         legal_moves.add(test_pos)
-        #         try:
-        #             test_pos = self.pos + (-1, 1)
-        #         except IndexError:
-        #             pass
-        #         else:
-        #             if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
-        #                 legal_moves.add(test_pos)
-        #         try:
-        #             test_pos = self.pos + (1, 1)
-        #             if test_pos.file >= self.board.files:
-        #                 raise IndexError
-        #         except IndexError:
-        #             pass
-        #         else:
-        #             if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
-        #                 legal_moves.add(test_pos)
-        #     case board.Color.BLACK:
-        #         try:
-        #             test_pos = self.pos + (0, -1)
-        #         except IndexError:
-        #             return frozenset()
-        #         if test_pos not in self.board.piece_array:
-        #             legal_moves.add(test_pos)
-        #             if self.pos.rank == self.board.pawn_ranks[board.Color.BLACK]:
-        #                 try:
-        #                     test_pos += (0, -1)
-        #                 except IndexError:
-        #                     pass
-        #                 else:
-        #                     if test_pos not in self.board.piece_array:
-        #                         legal_moves.add(test_pos)
-        #         try:
-        #             test_pos = self.pos + (-1, -1)
-        #         except IndexError:
-        #             pass
-        #         else:
-        #             if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
-        #                 legal_moves.add(test_pos)
-        #         try:
-        #             test_pos = self.pos + (1, -1)
-        #             if test_pos.file >= self.board.files:
-        #                 raise IndexError
-        #         except IndexError:
-        #             pass
-        #         else:
-        #             if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
-        #                 legal_moves.add(test_pos)
+        match self.color:
+            case board.Color.WHITE:
+                try:
+                    test_pos = self.pos + (0, 1)
+                    if test_pos.rank >= self.board.ranks:
+                        raise IndexError
+                except IndexError:
+                    return frozenset()
+                if test_pos not in self.board.piece_array:
+                    legal_moves.add(test_pos)
+                    if self.pos.rank == self.board.pawn_ranks[board.Color.WHITE]:
+                        try:
+                            test_pos += (0, 1)
+                            if test_pos.rank >= self.board.ranks:
+                                raise IndexError
+                        except IndexError:
+                            pass
+                        else:
+                            if test_pos not in self.board.piece_array:
+                                legal_moves.add(test_pos)
+                try:
+                    test_pos = self.pos + (-1, 1)
+                except IndexError:
+                    pass
+                else:
+                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                        legal_moves.add(test_pos)
+                try:
+                    test_pos = self.pos + (1, 1)
+                    if test_pos.file >= self.board.files:
+                        raise IndexError
+                except IndexError:
+                    pass
+                else:
+                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                        legal_moves.add(test_pos)
+            case board.Color.BLACK:
+                try:
+                    test_pos = self.pos + (0, -1)
+                except IndexError:
+                    return frozenset()
+                if test_pos not in self.board.piece_array:
+                    legal_moves.add(test_pos)
+                    if self.pos.rank == self.board.pawn_ranks[board.Color.BLACK]:
+                        try:
+                            test_pos += (0, -1)
+                        except IndexError:
+                            pass
+                        else:
+                            if test_pos not in self.board.piece_array:
+                                legal_moves.add(test_pos)
+                try:
+                    test_pos = self.pos + (-1, -1)
+                except IndexError:
+                    pass
+                else:
+                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                        legal_moves.add(test_pos)
+                try:
+                    test_pos = self.pos + (1, -1)
+                    if test_pos.file >= self.board.files:
+                        raise IndexError
+                except IndexError:
+                    pass
+                else:
+                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                        legal_moves.add(test_pos)
         return frozenset(legal_moves)
 
 
