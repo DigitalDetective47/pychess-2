@@ -10,10 +10,12 @@ del os_name
 
 
 def clear_screen() -> None:
+    "Clears the terminal."
     system(SYSTEM_CLEAR_SCREEN_COMMAND)
 
 
 def menu_str(title: str, options: Sequence[str]) -> str:
+    "Generates a string for a menu."
     if not isinstance(title, str):
         raise TypeError("title must be of type str (not " + type(title).__name__ + ")")
     if not isinstance(options, Sequence):
@@ -33,6 +35,7 @@ def menu_str(title: str, options: Sequence[str]) -> str:
 
 
 def get_menu_selection(menu_length: int) -> int:
+    "Gets a selection for a menu item. It will prompt the user repeatedly until a usable value is given."
     selection: str = input()
     while not (selection.isdigit() and 1 <= (result := int(selection)) <= menu_length):
         selection = input("Enter an integer corresponding to a menu item.\n")
