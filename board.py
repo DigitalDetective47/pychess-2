@@ -26,6 +26,11 @@ class Color(Enum):
             raise ValueError("Color NEUTRAL has no next color")
         return {Color.WHITE: Color.BLACK, Color.BLACK: Color.WHITE}[self]
 
+    def __str__(self) -> str:
+        return {Color.NEUTRAL: "Neutral", Color.WHITE: "White", Color.BLACK: "Black"}[
+            self
+        ]
+
 
 PLAYER_COLORS: Final[frozenset[Color]] = frozenset({Color.WHITE, Color.BLACK})
 
@@ -149,7 +154,6 @@ class Board:
         fen: str,
         piece_table: dict[str, type],
         pawn_ranks: dict[Color, SupportsIndex] = {},
-        **ex_attributes
     ) -> None:
         if not isinstance(fen, str):
             raise TypeError(
@@ -283,7 +287,6 @@ class Board:
                     "severely malformed pawn_ranks dict (this error should not be able to appear, even in user code)"
                 )
         self.pawn_ranks: Final[dict[Color, int]] = pawn_ranks_mem
-        self.ex_attributes: dict[str, Any] = ex_attributes
 
     def render(
         self,
