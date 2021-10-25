@@ -8,7 +8,7 @@ import settings
 class Piece:
     def __init__(
         self, position: board.Coordinate, color: board.Color, board_ref: board.Board
-    ):
+    ) -> None:
         if not isinstance(position, board.Coordinate):
             raise TypeError(
                 "position must be of type Coordinate (not "

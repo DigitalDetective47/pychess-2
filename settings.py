@@ -6,3 +6,6 @@ class CharSet(Enum):
     ASCII = enum_gen()
     EXTENDED = enum_gen()
     FULL = enum_gen()
+
+
+user_char_set: CharSet = CharSet.ASCII
