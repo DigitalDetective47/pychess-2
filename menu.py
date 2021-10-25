@@ -279,6 +279,6 @@ Menu(
                 ),
             ),
         ),
-        "<": MenuOption("QUIT", raise_menuexit),
+        "X": MenuOption("QUIT", raise_menuexit),
     },
 )()
