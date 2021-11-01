@@ -1,3 +1,4 @@
+import collections.abc as abc
 from functools import partial
 from importlib import import_module
 from inspect import signature
@@ -21,7 +22,7 @@ class MenuExit(BaseException):
     pass
 
 
-class MenuOption:
+class MenuOption(abc.Callable):
     def __init__(self, name: str, action: Callable[[], None]) -> None:
         if not isinstance(name, str):
             raise TypeError(
@@ -47,7 +48,7 @@ class MenuOption:
         return self.name
 
 
-class Menu:
+class Menu(abc.Callable):
     def __init__(self, title: str, options: dict[str, MenuOption]) -> None:
         if not isinstance(title, str):
             raise TypeError(
@@ -231,54 +232,57 @@ def raise_menuexit() -> NoReturn:
     raise MenuExit
 
 
-def set_user_char_set(char_set: settings.CharSet) -> None:
-    if not isinstance(char_set, settings.CharSet):
-        raise ValueError(
-            "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
-        )
-    settings.user_char_set = char_set
-
-
-def option_info(info: str) -> None:
-    if not isinstance(info, str):
-        raise ValueError("info must be of type str (not " + type(info).__name__ + ")")
-    clear_screen()
-    input(info + "\n")
-
-
 BACK_OPTION: Final[MenuOption] = MenuOption("BACK", raise_menuexit)
-CHAR_SET_INFO_OPTION: Final[MenuOption] = MenuOption(
-    "ABOUT THIS OPTION",
-    partial(
-        option_info,
-        "Controls what characters are used in the game's output. A wider character range leads to nicer looking output, but also increases the risk of missing characters.\n\n - ASCII (COMPATIBILITY MODE, DEFAULT): Only allows letters, numbers, and other symbols found on a standard US keyboard. Most limited, but universally compatible.\n - EXTENDED (RECCOMENDED): Allows all characters in ASCII, alongside many additional characters included in default fonts on most operating systems. More varied, but less compatible.\n - FULL: Allows all possible characters. Most varied, but poor compatibility.",
-    ),
-)
-CHAR_SET_ASCII_OPTION: Final[MenuOption] = MenuOption(
-    "ASCII (COMPATIBILITY MODE, DEFAULT)",
-    partial(set_user_char_set, settings.CharSet.ASCII),
-)
-CHAR_SET_EXTENDED_OPTION: Final[MenuOption] = MenuOption(
-    "EXTENDED (RECCOMENDED)", partial(set_user_char_set, settings.CharSet.EXTENDED)
-)
-CHAR_SET_FULL_OPTION: Final[MenuOption] = MenuOption(
-    "FULL", partial(set_user_char_set, settings.CharSet.FULL)
-)
 
-Menu(
-    "MAIN MENU",
-    {
-        "1": MenuOption(
-            "SETTINGS",
-            DynamicMenu(
-                compile("'SETTINGS'", __file__, "eval"),
-                compile(
-                    "{'1': MenuOption('CHARACTER SET: ' + settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
-                    __file__,
-                    "eval",
+
+def main():
+    def set_user_char_set(char_set: settings.CharSet) -> None:
+        if not isinstance(char_set, settings.CharSet):
+            raise ValueError(
+                "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
+            )
+        settings.user_char_set = char_set
+
+
+    def option_info(info: str) -> None:
+        if not isinstance(info, str):
+            raise ValueError("info must be of type str (not " + type(info).__name__ + ")")
+        clear_screen()
+        input(info + "\n")
+
+
+    CHAR_SET_INFO_OPTION: Final[MenuOption] = MenuOption(
+        "ABOUT THIS OPTION",
+        partial(
+            option_info,
+            "Controls what characters are used in the game's output. A wider character range leads to nicer looking output, but also increases the risk of missing characters.\n\n - ASCII (COMPATIBILITY MODE, DEFAULT): Only allows letters, numbers, and other symbols found on a standard US keyboard. Most limited, but universally compatible.\n - EXTENDED (RECCOMENDED): Allows all characters in ASCII, alongside many additional characters included in default fonts on most operating systems. More varied, but less compatible.\n - FULL: Allows all possible characters. Most varied, but poor compatibility.",
+        ),
+    )
+    CHAR_SET_ASCII_OPTION: Final[MenuOption] = MenuOption(
+        "ASCII (COMPATIBILITY MODE, DEFAULT)",
+        partial(set_user_char_set, settings.CharSet.ASCII),
+    )
+    CHAR_SET_EXTENDED_OPTION: Final[MenuOption] = MenuOption(
+        "EXTENDED (RECCOMENDED)", partial(set_user_char_set, settings.CharSet.EXTENDED)
+    )
+    CHAR_SET_FULL_OPTION: Final[MenuOption] = MenuOption(
+        "FULL", partial(set_user_char_set, settings.CharSet.FULL)
+    )
+
+    Menu(
+        "MAIN MENU",
+        {
+            "1": MenuOption(
+                "SETTINGS",
+                DynamicMenu(
+                    compile("'SETTINGS'", __file__, "eval"),
+                    compile(
+                        "{'1': MenuOption('CHARACTER SET: ' + settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
+                        __file__,
+                        "eval",
+                    ),
                 ),
             ),
-        ),
-        "X": MenuOption("QUIT", raise_menuexit),
-    },
-)()
+            "X": MenuOption("QUIT", raise_menuexit),
+        },
+    )()
