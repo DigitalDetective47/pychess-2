@@ -69,7 +69,7 @@ def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
     "Returns the location of a leap from the piece's position with an offset given if it is a legal position."
     if not isinstance(piece, Piece):
         raise TypeError(
-            "piece must be of type Piece or of a type derived from Piece (not "
+            "piece must be of type Piece (not "
             + type(piece).__name__
             + ")"
         )
@@ -86,7 +86,7 @@ def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
     "Returns a line of empty spaces from the piece's position to the next occupied square or the edge of the board, using the step size given."
     if not isinstance(piece, Piece):
         raise TypeError(
-            "piece must be of type Piece or of a type derived from Piece (not "
+            "piece must be of type Piece (not "
             + type(piece).__name__
             + ")"
         )
@@ -172,7 +172,7 @@ class Pawn(Piece):
     ) -> Optional[Piece]:
         if not (promotion is None or issubclass(promotion, Piece)):
             raise TypeError(
-                "promotion must be a piece class if specified (not "
+                "promotion must of type Piece or NoneType (not "
                 + type(promotion).__name__
                 + ")"
             )
