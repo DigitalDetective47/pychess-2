@@ -7,7 +7,7 @@ from os import system
 from types import CodeType as code
 from typing import Callable, Final, NoReturn
 
-import settings
+import lib.settings
 
 SYSTEM_CLEAR_SCREEN_COMMAND: Final[str] = "cls" if os_name == "nt" else "clear"
 del os_name
@@ -236,12 +236,12 @@ BACK_OPTION: Final[MenuOption] = MenuOption("BACK", raise_menuexit)
 
 
 def main():
-    def set_user_char_set(char_set: settings.CharSet) -> None:
-        if not isinstance(char_set, settings.CharSet):
+    def set_user_char_set(char_set: lib.settings.CharSet) -> None:
+        if not isinstance(char_set, lib.settings.CharSet):
             raise ValueError(
                 "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
             )
-        settings.user_char_set = char_set
+        lib.settings.user_char_set = char_set
 
 
     def option_info(info: str) -> None:
@@ -251,22 +251,26 @@ def main():
         input(info + "\n")
 
 
-    CHAR_SET_INFO_OPTION: Final[MenuOption] = MenuOption(
+    global CHAR_SET_INFO_OPTION
+    global CHAR_SET_ASCII_OPTION
+    global CHAR_SET_EXTENDED_OPTION
+    global CHAR_SET_FULL_OPTION
+    CHAR_SET_INFO_OPTION = MenuOption(
         "ABOUT THIS OPTION",
         partial(
             option_info,
             "Controls what characters are used in the game's output. A wider character range leads to nicer looking output, but also increases the risk of missing characters.\n\n - ASCII (COMPATIBILITY MODE, DEFAULT): Only allows letters, numbers, and other symbols found on a standard US keyboard. Most limited, but universally compatible.\n - EXTENDED (RECCOMENDED): Allows all characters in ASCII, alongside many additional characters included in default fonts on most operating systems. More varied, but less compatible.\n - FULL: Allows all possible characters. Most varied, but poor compatibility.",
         ),
     )
-    CHAR_SET_ASCII_OPTION: Final[MenuOption] = MenuOption(
+    CHAR_SET_ASCII_OPTION = MenuOption(
         "ASCII (COMPATIBILITY MODE, DEFAULT)",
-        partial(set_user_char_set, settings.CharSet.ASCII),
+        partial(set_user_char_set, lib.settings.CharSet.ASCII),
     )
-    CHAR_SET_EXTENDED_OPTION: Final[MenuOption] = MenuOption(
-        "EXTENDED (RECCOMENDED)", partial(set_user_char_set, settings.CharSet.EXTENDED)
+    CHAR_SET_EXTENDED_OPTION = MenuOption(
+        "EXTENDED (RECCOMENDED)", partial(set_user_char_set, lib.settings.CharSet.EXTENDED)
     )
-    CHAR_SET_FULL_OPTION: Final[MenuOption] = MenuOption(
-        "FULL", partial(set_user_char_set, settings.CharSet.FULL)
+    CHAR_SET_FULL_OPTION = MenuOption(
+        "FULL", partial(set_user_char_set, lib.settings.CharSet.FULL)
     )
 
     Menu(
@@ -277,7 +281,7 @@ def main():
                 DynamicMenu(
                     compile("'SETTINGS'", __file__, "eval"),
                     compile(
-                        "{'1': MenuOption('CHARACTER SET: ' + settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
+                        "{'1': MenuOption('CHARACTER SET: ' + lib.settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + lib.settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
                         __file__,
                         "eval",
                     ),
