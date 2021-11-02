@@ -277,7 +277,7 @@ def main():
                 DynamicMenu(
                     compile("'SETTINGS'", __file__, "eval"),
                     compile(
-                        "{'1': MenuOption('CHARACTER SET: ' + settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
+                        "{'1': MenuOption('CHARACTER SET: ' + lib.settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + lib.settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
                         __file__,
                         "eval",
                     ),
