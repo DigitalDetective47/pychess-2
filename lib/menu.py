@@ -5,7 +5,7 @@ from inspect import signature
 from os import name as os_name
 from os import system
 from types import CodeType as code
-from typing import Callable, Final, NoReturn
+from typing import Callable, Final, Iterator, Mapping, NoReturn
 
 import lib.settings
 
@@ -48,17 +48,17 @@ class MenuOption(abc.Callable):
         return self.name
 
 
-class Menu(abc.Callable):
-    def __init__(self, title: str, options: dict[str, MenuOption]) -> None:
+class StaticMenu(abc.Callable, abc.MutableMapping):
+    def __init__(self, title: str, options: Mapping[str, MenuOption]) -> None:
         if not isinstance(title, str):
             raise TypeError(
                 "title must be of type str (not " + type(title).__name__ + ")"
             )
-        elif not isinstance(options, dict):
+        elif not isinstance(options, Mapping):
             raise TypeError(
-                "options must be of type dict (not " + type(title).__name__ + ")"
+                "options must be of type Mapping (not " + type(title).__name__ + ")"
             )
-        self.actions: Final[dict[str, Callable[[], None]]] = {}
+        self.options: Final[dict[str, MenuOption]] = {}
         for index, option in options.items():
             if not isinstance(index, str):
                 raise TypeError(
@@ -72,16 +72,14 @@ class Menu(abc.Callable):
                     + type(option).__name__
                     + ")"
                 )
-            self.actions[str(index)] = option.action
+            self.options[str(index)] = option
         menu_option_width: Final[int] = max([len(index) for index in options.keys()])
         title_offset: Final[str] = " " * (menu_option_width + 1)
         appearance: str = title_offset + title + "\n" + title_offset + "-" * len(title)
         for index, option in options.items():
-            appearance += (
-                "\n"
-                + ("{:>" + str(menu_option_width) + "}|").format(index)
-                + option.name
-            )
+            appearance += ("\n{:>" + str(menu_option_width) + "}|").format(
+                index
+            ) + option.name
         self.appearance: Final[str] = appearance
 
     def __bytes__(self) -> bytes:
@@ -95,13 +93,13 @@ class Menu(abc.Callable):
                 print(self.appearance + "\n")
                 selected_action: Callable[[], None]
                 try:
-                    selected_action = self.actions[input()]
+                    selected_action = self.options[input()].action
                 except KeyError:
                     while True:
                         try:
-                            selected_action = self.actions[
+                            selected_action = self.options[
                                 input("Select a menu item listed.\n")
-                            ]
+                            ].action
                         except KeyError:
                             pass
                         else:
@@ -110,44 +108,68 @@ class Menu(abc.Callable):
         except MenuExit:
             pass
 
+    def __delitem__(self, key: str) -> None:
+        try:
+            line_number: int = tuple(self.options).index(key) + 2
+        except ValueError:
+            raise KeyError(key)
+        del self.options[key]
+        appearance_lines: str = self.appearance.splitlines(True)
+        self.appearance = "".join(
+            appearance_lines[:line_number] + appearance_lines[line_number + 1 :]
+        )
+
+    def __getitem__(self, key: str) -> MenuOption:
+        return self.options[key]
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self.options)
+
+    def __len__(self) -> int:
+        return len(self.options)
+
     def __repr__(self) -> str:
         display_lines: Final[list[str]] = self.appearance.splitlines()
-        sidebar_width: Final[int] = display_lines[1].count(" ")
         return (
-            "Menu("
-            + repr(display_lines[0][sidebar_width:])
-            + ", {"
-            + ", ".join(
-                [
-                    repr(index)
-                    + ": MenuOption("
-                    + repr(display_lines[line_number][sidebar_width:])
-                    + ", "
-                    + repr(action)
-                    + ")"
-                    for index, line_number, action in zip(
-                        self.actions.keys(),
-                        range(2, len(display_lines)),
-                        self.actions.values(),
-                    )
-                ]
-            )
-            + "})"
+            "StaticMenu("
+            + repr(display_lines[0][display_lines[1].count(" ") :])
+            + ", "
+            + repr(self.options)
+            + ")"
         )
+
+    def __setitem__(self, key: str, value: MenuOption) -> None:
+        if key in self.options:
+            self.options[key] = value
+            line_number: int = tuple(self.options).index(key) + 2
+            appearance_lines: str = self.appearance.splitlines()
+            self.appearance = "\n".join(
+                appearance_lines[:line_number]
+                + [
+                    ("{:>" + str(appearance_lines[1].count(" ")) + "}|").format(key)
+                    + value.name
+                ]
+                + appearance_lines[line_number + 1 :]
+            )
+        else:
+            self.options[key]
+            self.appearance += (
+                "\n{:>" + str(self.appearance.splitlines()[1].count(" ") - 1) + "}|"
+            ).format(key) + value.name
 
     def __str__(self) -> str:
         return self.appearance
 
 
-class DynamicMenu(Menu):
+class DynamicMenu(abc.Callable):
     def __init__(
         self, title_expression: code | str, options_expression: code | str
     ) -> None:
         self.title_expr: Final[code | str] = title_expression
         self.options_expr: Final[code | str] = options_expression
 
-    def generate_static(self) -> Menu:
-        return Menu(eval(self.title_expr), eval(self.options_expr))
+    def generate_static(self) -> StaticMenu:
+        return StaticMenu(eval(self.title_expr), eval(self.options_expr))
 
     def __bytes__(self) -> bytes:
         return bytes(self.generate_static())
@@ -157,14 +179,16 @@ class DynamicMenu(Menu):
         try:
             while True:
                 title: str = eval(self.title_expr)
-                options: dict[str, MenuOption] = eval(self.options_expr)
+                options: Mapping[str, MenuOption] = eval(self.options_expr)
                 if not isinstance(title, str):
                     raise TypeError(
-                        "title must be of type str (not " + type(title).__name__ + ")"
+                        "title_expression must evaluate to type str (not "
+                        + type(title).__name__
+                        + ")"
                     )
-                elif not isinstance(options, dict):
+                elif not isinstance(options, Mapping):
                     raise TypeError(
-                        "options must be of type dict (not "
+                        "options_expressions must evaluate to type Mapping (not "
                         + type(title).__name__
                         + ")"
                     )
@@ -172,13 +196,13 @@ class DynamicMenu(Menu):
                 for index, option in options.items():
                     if not isinstance(index, str):
                         raise TypeError(
-                            "options keys must be of type str (not "
+                            "options_expressions keys must be of type str (not "
                             + type(index).__name__
                             + ")"
                         )
                     elif not isinstance(option, MenuOption):
                         raise TypeError(
-                            "options values must be of type MenuOption (not "
+                            "options_expressions values must be of type MenuOption (not "
                             + type(option).__name__
                             + ")"
                         )
@@ -243,13 +267,13 @@ def main():
             )
         lib.settings.user_char_set = char_set
 
-
     def option_info(info: str) -> None:
         if not isinstance(info, str):
-            raise ValueError("info must be of type str (not " + type(info).__name__ + ")")
+            raise ValueError(
+                "info must be of type str (not " + type(info).__name__ + ")"
+            )
         clear_screen()
         input(info + "\n")
-
 
     global CHAR_SET_INFO_OPTION
     global CHAR_SET_ASCII_OPTION
@@ -267,13 +291,14 @@ def main():
         partial(set_user_char_set, lib.settings.CharSet.ASCII),
     )
     CHAR_SET_EXTENDED_OPTION = MenuOption(
-        "EXTENDED (RECCOMENDED)", partial(set_user_char_set, lib.settings.CharSet.EXTENDED)
+        "EXTENDED (RECCOMENDED)",
+        partial(set_user_char_set, lib.settings.CharSet.EXTENDED),
     )
     CHAR_SET_FULL_OPTION = MenuOption(
         "FULL", partial(set_user_char_set, lib.settings.CharSet.FULL)
     )
 
-    Menu(
+    StaticMenu(
         "MAIN MENU",
         {
             "1": MenuOption(

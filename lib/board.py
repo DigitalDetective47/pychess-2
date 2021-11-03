@@ -1,6 +1,7 @@
+import collections.abc as abc
 from enum import Enum, Flag
 from enum import auto as enum_gen
-from typing import Any, Final, Optional, Sequence, SupportsIndex
+from typing import Any, Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
 
 CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
 FULLWIDTH_INVERTED_CHECKERBOARD: Final[str] = "\uFF03\uFF0E\n\uFF0E\uFF03"
@@ -148,20 +149,20 @@ class Coordinate:
         return chr(self.pos[0] + 97) + str(self.pos[1] + 1)
 
 
-class Board:
+class Board(abc.MutableMapping):
     def __init__(
         self,
         fen: str,
-        piece_table: dict[str, type],
-        pawn_ranks: dict[Color, SupportsIndex] = {},
+        piece_table: Mapping[str, type],
+        pawn_ranks: Mapping[Color, SupportsIndex] = {},
     ) -> None:
         if not isinstance(fen, str):
             raise TypeError(
                 "fen must be of type string (not " + type(fen).__name__ + ")"
             )
-        if not isinstance(piece_table, dict):
+        if not isinstance(piece_table, Mapping):
             raise TypeError(
-                "piece_table must be of type dict (not "
+                "piece_table must be of type Mapping (not "
                 + type(piece_table).__name__
                 + ")"
             )
@@ -183,9 +184,9 @@ class Board:
             raise ValueError("fen parameter is not valid fen")
         rank_data: Final[list[str]] = fen_components[0].split("/")[::-1]
         self.ranks: Final[int] = len(rank_data)
-        if not (pawn_ranks is None or isinstance(pawn_ranks, dict)):
+        if not (pawn_ranks is None or isinstance(pawn_ranks, Mapping)):
             raise TypeError(
-                "pawn_ranks must be of type dict if specified (not "
+                "pawn_ranks must be of type Mapping if specified (not "
                 + type(pawn_ranks).__name__
                 + ")"
             )
@@ -211,7 +212,7 @@ class Board:
         num_files: int = -1
         digit_buffer: str = ""
         file: int
-        self.piece_array: dict[Coordinate, Any] = {}
+        self.piece_array: Mapping[Coordinate, Any] = {}
         for rank in range(self.ranks):
             file = 0
             for char in rank_data[rank]:
@@ -272,7 +273,7 @@ class Board:
         )
         self.halfmove_clock: int = int(fen_components[4])
         self.fullmove_clock: int = int(fen_components[5])
-        pawn_ranks_mem: dict[Color, int]
+        pawn_ranks_mem: Mapping[Color, int]
         match pawn_ranks:
             case {}:
                 pawn_ranks_mem = {Color.WHITE: 1, Color.BLACK: self.ranks - 2}
@@ -284,28 +285,50 @@ class Board:
                 pawn_ranks_mem = pawn_ranks
             case _:
                 raise ValueError(
-                    "severely malformed pawn_ranks dict (this error should not be able to appear, even in user code)"
+                    "severely malformed pawn_ranks Mapping (this error should not be able to appear, even in user code)"
                 )
-        self.pawn_ranks: Final[dict[Color, int]] = pawn_ranks_mem
+        self.pawn_ranks: Final[Mapping[Color, int]] = pawn_ranks_mem
+
+    def __delitem__(self, key: Coordinate) -> None:
+        del self.piece_array[key]
+
+    def __eq__(self, other) -> bool:
+        return (
+            self.piece_array == other.piece_array
+            and self.turn == other.turn
+            and self.castling_rights == other.castling_rights
+            and self.pawn_ranks == other.pawn_ranks
+            if isinstance(other, Board)
+            else NotImplemented
+        )
+
+    def __iter__(self) -> Iterator[Coordinate]:
+        return iter(self.piece_array)
+
+    def __getitem__(self, key: Coordinate):
+        return self.piece_array[key]
+
+    def __len__(self) -> int:
+        return len(self.piece_array)
 
     def render(
         self,
-        piece_symbols: dict[type, dict[Color, str]],
+        piece_symbols: Mapping[type, Mapping[Color, str]],
         checker_pattern: str,
         perspective: Color,
         fullwidth: bool = False,
     ) -> str:
         "Returns a string representation of the board meant to be printed to the terminal."
-        if not isinstance(piece_symbols, dict):
+        if not isinstance(piece_symbols, Mapping):
             raise TypeError(
-                "piece_symbols must be of type dict (not "
+                "piece_symbols must be of type Mapping (not "
                 + type(piece_symbols).__name__
                 + ")"
             )
         for piece_type in piece_symbols.values():
-            if not isinstance(piece_type, dict):
+            if not isinstance(piece_type, Mapping):
                 raise TypeError(
-                    "piece_symbols must have dict values (not "
+                    "piece_symbols must have Mapping values (not "
                     + type(piece_type).__name__
                     + ")"
                 )
@@ -396,3 +419,6 @@ class Board:
             + file_labels
         )
         return board_str
+
+    def __setitem__(self, key: Coordinate, value) -> None:
+        self.piece_array[key] = value
