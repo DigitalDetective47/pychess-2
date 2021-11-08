@@ -7,5 +7,5 @@ class CharSet(Enum):
     EXTENDED = enum_gen()
     FULL = enum_gen()
 
-
-user_char_set: CharSet = CharSet.ASCII
+char_set: CharSet = CharSet.ASCII
+dark_mode: bool = False

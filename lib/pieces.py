@@ -1,42 +1,69 @@
+from enum import Enum
+from enum import auto as enum_gen
 from itertools import product as all_pairs
 from typing import Final, Optional, Sequence, SupportsIndex
 
-import lib.board
-import lib.settings
+from lib import settings
+
+
+class Color(Enum):
+    NEUTRAL = enum_gen()
+    WHITE = enum_gen()
+    BLACK = enum_gen()
+
+    def next(self):
+        if self == Color.NEUTRAL:
+            raise ValueError("Color NEUTRAL has no next color")
+        return {Color.WHITE: Color.BLACK, Color.BLACK: Color.WHITE}[self]
+
+    def __str__(self) -> str:
+        return {Color.NEUTRAL: "Neutral", Color.WHITE: "White", Color.BLACK: "Black"}[
+            self
+        ]
+
+
+PLAYER_COLORS: Final[frozenset[Color]] = frozenset({Color.WHITE, Color.BLACK})
+
+from lib import board
 
 
 class Piece:
     def __init__(
-        self, position: lib.board.Coordinate, color: lib.board.Color, board_ref: lib.board.Board
+        self, position: board.Coordinate, color: Color, board_ref: board.Board
     ) -> None:
-        if not isinstance(position, lib.board.Coordinate):
+        if not isinstance(position, board.Coordinate):
             raise TypeError(
                 "position must be of type Coordinate (not "
                 + type(position).__name__
                 + ")"
             )
-        elif not isinstance(color, lib.board.Color):
+        elif not isinstance(color, Color):
             raise TypeError(
                 "color must be of type Color (not " + type(color).__name__ + ")"
             )
-        elif not isinstance(board_ref, lib.board.Board):
+        elif not isinstance(board_ref, board.Board):
             raise TypeError(
                 "board_ref must be of type Board (not " + type(board_ref).__name__ + ")"
             )
-        self.pos: lib.board.Coordinate = position
-        self.color: Final[lib.board.Color] = color
-        self.board: lib.board.Board = board_ref
+        self.pos: board.Coordinate = position
+        self.color: Final[Color] = color
+        self.board: board.Board = board_ref
 
     def attacked_by(self) -> frozenset:
         "Returns the set of all enemy pieces that can attack this piece."
         attackers: set[Piece] = set()
         for rank, file in all_pairs(range(self.board.ranks), range(self.board.files)):
-            piece_of_interest = self.board.piece_array[lib.board.Coordinate((file, rank))]
-            if self.color != piece_of_interest.color and self.pos in piece_of_interest.moves():
+            piece_of_interest = self.board.piece_array[
+                board.Coordinate((file, rank))
+            ]
+            if (
+                self.color != piece_of_interest.color
+                and self.pos in piece_of_interest.moves()
+            ):
                 attackers.add(piece_of_interest)
         return frozenset(attackers)
 
-    def move(self, dest: lib.board.Coordinate, promotion: Optional[type] = None):
+    def move(self, dest: board.Coordinate, promotion: Optional[type] = None):
         "Moves the piece to the given destination, and returns the piece that was captured, if any."
         if not (promotion is None or issubclass(promotion, Piece)):
             raise TypeError(
@@ -44,28 +71,30 @@ class Piece:
                 + type(promotion).__name__
                 + ")"
             )
+        elif dest.file > self.board.files or dest.rank > self.board.ranks:
+            raise IndexError("dest must be inside self.board")
         self.board.en_passant = None
         self.board.halfmove_clock += 1
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
         try:
-            captured_piece: Optional[Piece] = self.board.piece_array[dest]
+            captured_piece: Optional[Piece] = self.board[dest]
         except KeyError:
             captured_piece = None
-        del self.board.piece_array[self.pos]
+        del self.board[self.pos]
         if promotion is None:
             self.pos = dest
-            self.board.piece_array[dest] = self
+            self.board[dest] = self
         else:
-            self.board.piece_array[dest] = promotion(dest, self.color, self.board)
+            self.board[dest] = promotion(dest, self.color, self.board)
         return captured_piece
 
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         "Returns the set of all spaces that the piece can move to, excluding rules about check or self-capture."
         return frozenset()
 
 
-def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coordinate]:
+def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordinate]:
     "Returns the location of a leap from the piece's position with an offset given if it is a legal position."
     if not isinstance(piece, Piece):
         raise TypeError(
@@ -74,7 +103,7 @@ def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coo
             + ")"
         )
     try:
-        test_pos: lib.board.Coordinate = piece.pos + step
+        test_pos: board.Coordinate = piece.pos + step
         if test_pos.file >= piece.board.files or test_pos.rank >= piece.board.ranks:
             raise IndexError
         return frozenset({test_pos})
@@ -82,7 +111,7 @@ def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coo
         return frozenset()
 
 
-def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coordinate]:
+def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordinate]:
     "Returns a line of empty spaces from the piece's position to the next occupied square or the edge of the board, using the step size given."
     if not isinstance(piece, Piece):
         raise TypeError(
@@ -90,8 +119,8 @@ def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coo
             + type(piece).__name__
             + ")"
         )
-    test_pos: lib.board.Coordinate = piece.pos
-    positions: set[lib.board.Coordinate] = set()
+    test_pos: board.Coordinate = piece.pos
+    positions: set[board.Coordinate] = set()
     while True:
         try:
             test_pos += step
@@ -100,13 +129,13 @@ def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[lib.board.Coo
         except IndexError:
             return frozenset(positions)
         positions.add(test_pos)
-        if test_pos in piece.board.piece_array:
+        if test_pos in piece.board:
             return frozenset(positions)
 
 
 def sym_leap(
     piece: Piece, step: Sequence[SupportsIndex]
-) -> frozenset[lib.board.Coordinate]:
+) -> frozenset[board.Coordinate]:
     "Similar to the standard leap() function, but includes all possible reflections and rotations of the step value."
     return (
         leap(piece, step)
@@ -122,7 +151,7 @@ def sym_leap(
 
 def sym_ride(
     piece: Piece, step: Sequence[SupportsIndex]
-) -> frozenset[lib.board.Coordinate]:
+) -> frozenset[board.Coordinate]:
     "Similar to the standard ride() function, but includes all possible reflections and rotations of the step value."
     return (
         ride(piece, step)
@@ -137,38 +166,38 @@ def sym_ride(
 
 
 class Amazon(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 0)) | sym_ride(self, (1, 1)) | sym_leap(self, (2, 1))
 
 
 class Bishop(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 1))
 
 
 class Empress(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 0)) | sym_leap(self, (2, 1))
 
 
 class King(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_leap(self, (1, 0)) | sym_leap(self, (1, 1))
 
 
 class Knight(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_leap(self, (2, 1))
 
 
 class Nightrider(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (2, 1))
 
 
 class Pawn(Piece):
     def move(
-        self, dest: lib.board.Coordinate, promotion: Optional[type] = None
+        self, dest: board.Coordinate, promotion: Optional[type] = None
     ) -> Optional[Piece]:
         if not (promotion is None or issubclass(promotion, Piece)):
             raise TypeError(
@@ -180,49 +209,47 @@ class Pawn(Piece):
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
         if dest == self.board.en_passant:
-            capture_location: Final[lib.board.Coordinate] = dest + (
+            capture_location: Final[board.Coordinate] = dest + (
                 0,
-                -1 if self.color == lib.board.Color.WHITE else 1,
+                -1 if self.color == Color.WHITE else 1,
             )
             try:
-                captured_piece: Optional[Piece] = self.board.piece_array[
-                    capture_location
-                ]
-                del self.board.piece_array[capture_location]
+                captured_piece: Optional[Piece] = self.board[capture_location]
+                del self.board[capture_location]
             except KeyError:
                 captured_piece = None
         else:
             try:
-                captured_piece: Optional[Piece] = self.board.piece_array[dest]
+                captured_piece: Optional[Piece] = self.board[dest]
             except KeyError:
                 captured_piece = None
             self.board.en_passant = (
-                dest + (0, -1 if self.color == lib.board.Color.WHITE else 1)
+                dest + (0, -1 if self.color == Color.WHITE else 1)
                 if abs(self.pos.rank - dest.rank) == 2
                 else None
             )
-        del self.board.piece_array[self.pos]
+        del self.board[self.pos]
         if promotion is None:
             self.pos = dest
-            self.board.piece_array[dest] = self
+            self.board[dest] = self
         else:
-            self.board.piece_array[dest] = promotion(dest, self.color, self.board)
+            self.board[dest] = promotion(dest, self.color, self.board)
         return captured_piece
 
-    def moves(self) -> frozenset[lib.board.Coordinate]:
-        legal_moves: set[lib.board.Coordinate] = set()
-        test_pos: lib.board.Coordinate
+    def moves(self) -> frozenset[board.Coordinate]:
+        legal_moves: set[board.Coordinate] = set()
+        test_pos: board.Coordinate
         match self.color:
-            case lib.board.Color.WHITE:
+            case Color.WHITE:
                 try:
                     test_pos = self.pos + (0, 1)
                     if test_pos.rank >= self.board.ranks:
                         raise IndexError
                 except IndexError:
                     return frozenset()
-                if test_pos not in self.board.piece_array:
+                if test_pos not in self.board:
                     legal_moves.add(test_pos)
-                    if self.pos.rank == self.board.pawn_ranks[lib.board.Color.WHITE]:
+                    if self.pos.rank == self.board.pawn_ranks[Color.WHITE]:
                         try:
                             test_pos += (0, 1)
                             if test_pos.rank >= self.board.ranks:
@@ -230,14 +257,14 @@ class Pawn(Piece):
                         except IndexError:
                             pass
                         else:
-                            if test_pos not in self.board.piece_array:
+                            if test_pos not in self.board:
                                 legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (-1, 1)
                 except IndexError:
                     pass
                 else:
-                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                    if test_pos == self.board.en_passant or test_pos in self.board:
                         legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (1, 1)
@@ -246,29 +273,29 @@ class Pawn(Piece):
                 except IndexError:
                     pass
                 else:
-                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                    if test_pos == self.board.en_passant or test_pos in self.board:
                         legal_moves.add(test_pos)
-            case lib.board.Color.BLACK:
+            case Color.BLACK:
                 try:
                     test_pos = self.pos + (0, -1)
                 except IndexError:
                     return frozenset()
-                if test_pos not in self.board.piece_array:
+                if test_pos not in self.board:
                     legal_moves.add(test_pos)
-                    if self.pos.rank == self.board.pawn_ranks[lib.board.Color.BLACK]:
+                    if self.pos.rank == self.board.pawn_ranks[Color.BLACK]:
                         try:
                             test_pos += (0, -1)
                         except IndexError:
                             pass
                         else:
-                            if test_pos not in self.board.piece_array:
+                            if test_pos not in self.board:
                                 legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (-1, -1)
                 except IndexError:
                     pass
                 else:
-                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                    if test_pos == self.board.en_passant or test_pos in self.board:
                         legal_moves.add(test_pos)
                 try:
                     test_pos = self.pos + (1, -1)
@@ -277,23 +304,23 @@ class Pawn(Piece):
                 except IndexError:
                     pass
                 else:
-                    if test_pos == self.board.en_passant or test_pos in self.board.piece_array:
+                    if test_pos == self.board.en_passant or test_pos in self.board:
                         legal_moves.add(test_pos)
         return frozenset(legal_moves)
 
 
 class Princess(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 1)) | sym_leap(self, (2, 1))
 
 
 class Queen(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 0)) | sym_ride(self, (1, 1))
 
 
 class Rook(Piece):
-    def moves(self) -> frozenset[lib.board.Coordinate]:
+    def moves(self) -> frozenset[board.Coordinate]:
         return sym_ride(self, (1, 0))
 
 
@@ -311,73 +338,73 @@ STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
     "-": Piece,
 }
 STANDARD_PIECE_SYMBOLS: Final[
-    dict[lib.settings.CharSet, dict[type, dict[lib.board.Color, str]]]
+    dict[settings.CharSet, dict[type, dict[Color, str]]]
 ] = {
-    lib.settings.CharSet.ASCII: {
-        Amazon: {lib.board.Color.WHITE: "A", lib.board.Color.BLACK: "a"},
-        Bishop: {lib.board.Color.WHITE: "B", lib.board.Color.BLACK: "b"},
-        Empress: {lib.board.Color.WHITE: "M", lib.board.Color.BLACK: "m"},
-        King: {lib.board.Color.WHITE: "K", lib.board.Color.BLACK: "k"},
-        Knight: {lib.board.Color.WHITE: "N", lib.board.Color.BLACK: "n"},
-        Nightrider: {lib.board.Color.WHITE: "S", lib.board.Color.BLACK: "s"},
-        Pawn: {lib.board.Color.WHITE: "P", lib.board.Color.BLACK: "p"},
-        Piece: {lib.board.Color.NEUTRAL: " "},
-        Princess: {lib.board.Color.WHITE: "C", lib.board.Color.BLACK: "c"},
-        Queen: {lib.board.Color.WHITE: "Q", lib.board.Color.BLACK: "q"},
-        Rook: {lib.board.Color.WHITE: "R", lib.board.Color.BLACK: "r"},
+    settings.CharSet.ASCII: {
+        Amazon: {Color.WHITE: "A", Color.BLACK: "a"},
+        Bishop: {Color.WHITE: "B", Color.BLACK: "b"},
+        Empress: {Color.WHITE: "M", Color.BLACK: "m"},
+        King: {Color.WHITE: "K", Color.BLACK: "k"},
+        Knight: {Color.WHITE: "N", Color.BLACK: "n"},
+        Nightrider: {Color.WHITE: "S", Color.BLACK: "s"},
+        Pawn: {Color.WHITE: "P", Color.BLACK: "p"},
+        Piece: {Color.NEUTRAL: " "},
+        Princess: {Color.WHITE: "C", Color.BLACK: "c"},
+        Queen: {Color.WHITE: "Q", Color.BLACK: "q"},
+        Rook: {Color.WHITE: "R", Color.BLACK: "r"},
     },
-    lib.settings.CharSet.EXTENDED: {
-        Amazon: {lib.board.Color.WHITE: "\uFF21", lib.board.Color.BLACK: "\uFF41"},
-        Bishop: {lib.board.Color.WHITE: "\u2657", lib.board.Color.BLACK: "\u265D"},
-        Empress: {lib.board.Color.WHITE: "\uFF2D", lib.board.Color.BLACK: "\uFF2D"},
-        King: {lib.board.Color.WHITE: "\u2654", lib.board.Color.BLACK: "\u265A"},
-        Knight: {lib.board.Color.WHITE: "\u2658", lib.board.Color.BLACK: "\u265E"},
-        Nightrider: {lib.board.Color.WHITE: "\uFF33", lib.board.Color.BLACK: "\uFF53"},
-        Pawn: {lib.board.Color.WHITE: "\u2659", lib.board.Color.BLACK: "\u265F"},
-        Piece: {lib.board.Color.NEUTRAL: "\u3000"},
-        Princess: {lib.board.Color.WHITE: "\uFF23", lib.board.Color.BLACK: "\uFF43"},
-        Queen: {lib.board.Color.WHITE: "\u2655", lib.board.Color.BLACK: "\u265B"},
-        Rook: {lib.board.Color.WHITE: "\u2657", lib.board.Color.BLACK: "\u265C"},
+    settings.CharSet.EXTENDED: {
+        Amazon: {Color.WHITE: "\uFF21", Color.BLACK: "\uFF41"},
+        Bishop: {Color.WHITE: "\u2657", Color.BLACK: "\u265D"},
+        Empress: {Color.WHITE: "\uFF2D", Color.BLACK: "\uFF2D"},
+        King: {Color.WHITE: "\u2654", Color.BLACK: "\u265A"},
+        Knight: {Color.WHITE: "\u2658", Color.BLACK: "\u265E"},
+        Nightrider: {Color.WHITE: "\uFF33", Color.BLACK: "\uFF53"},
+        Pawn: {Color.WHITE: "\u2659", Color.BLACK: "\u265F"},
+        Piece: {Color.NEUTRAL: "\u3000"},
+        Princess: {Color.WHITE: "\uFF23", Color.BLACK: "\uFF43"},
+        Queen: {Color.WHITE: "\u2655", Color.BLACK: "\u265B"},
+        Rook: {Color.WHITE: "\u2657", Color.BLACK: "\u265C"},
     },
-    lib.settings.CharSet.FULL: {
-        Amazon: {lib.board.Color.WHITE: "\U0001FA4E", lib.board.Color.BLACK: "\U0001FA51"},
+    settings.CharSet.FULL: {
+        Amazon: {Color.WHITE: "\U0001FA4E", Color.BLACK: "\U0001FA51"},
         Bishop: {
-            lib.board.Color.NEUTRAL: "\U0001FA03",
-            lib.board.Color.WHITE: "\u2657",
-            lib.board.Color.BLACK: "\u265D",
+            Color.NEUTRAL: "\U0001FA03",
+            Color.WHITE: "\u2657",
+            Color.BLACK: "\u265D",
         },
-        Empress: {lib.board.Color.WHITE: "\U0001FA4F", lib.board.Color.BLACK: "\U0001FA52"},
+        Empress: {Color.WHITE: "\U0001FA4F", Color.BLACK: "\U0001FA52"},
         King: {
-            lib.board.Color.NEUTRAL: "\U0001FA00",
-            lib.board.Color.WHITE: "\u2654",
-            lib.board.Color.BLACK: "\u265A",
+            Color.NEUTRAL: "\U0001FA00",
+            Color.WHITE: "\u2654",
+            Color.BLACK: "\u265A",
         },
         Knight: {
-            lib.board.Color.NEUTRAL: "\U0001FA04",
-            lib.board.Color.WHITE: "\u2658",
-            lib.board.Color.BLACK: "\u265E",
+            Color.NEUTRAL: "\U0001FA04",
+            Color.WHITE: "\u2658",
+            Color.BLACK: "\u265E",
         },
         Nightrider: {
-            lib.board.Color.NEUTRAL: "\U0001FA2E",
-            lib.board.Color.WHITE: "\U0001FA22",
-            lib.board.Color.BLACK: "\U0001FA20",
+            Color.NEUTRAL: "\U0001FA2E",
+            Color.WHITE: "\U0001FA22",
+            Color.BLACK: "\U0001FA20",
         },
         Pawn: {
-            lib.board.Color.NEUTRAL: "\U0001FA05",
-            lib.board.Color.WHITE: "\u2659",
-            lib.board.Color.BLACK: "\u265F",
+            Color.NEUTRAL: "\U0001FA05",
+            Color.WHITE: "\u2659",
+            Color.BLACK: "\u265F",
         },
-        Piece: {lib.board.Color.NEUTRAL: "\u3000"},
-        Princess: {lib.board.Color.WHITE: "\U0001FA50", lib.board.Color.BLACK: "\U0001FA53"},
+        Piece: {Color.NEUTRAL: "\u3000"},
+        Princess: {Color.WHITE: "\U0001FA50", Color.BLACK: "\U0001FA53"},
         Queen: {
-            lib.board.Color.NEUTRAL: "\U0001FA01",
-            lib.board.Color.WHITE: "\u2655",
-            lib.board.Color.BLACK: "\u265B",
+            Color.NEUTRAL: "\U0001FA01",
+            Color.WHITE: "\u2655",
+            Color.BLACK: "\u265B",
         },
         Rook: {
-            lib.board.Color.NEUTRAL: "\U0001FA02",
-            lib.board.Color.WHITE: "\u2657",
-            lib.board.Color.BLACK: "\u265C",
+            Color.NEUTRAL: "\U0001FA02",
+            Color.WHITE: "\u2657",
+            Color.BLACK: "\u265C",
         },
     },
 }

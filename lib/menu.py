@@ -1,25 +1,23 @@
 import collections.abc as abc
 from functools import partial
 from importlib import import_module
-from inspect import signature
 from os import name as os_name
 from os import system
 from types import CodeType as code
-from typing import Callable, Final, Iterator, Mapping, NoReturn
-
-import lib.settings
-
-SYSTEM_CLEAR_SCREEN_COMMAND: Final[str] = "cls" if os_name == "nt" else "clear"
-del os_name
-
-
-def clear_screen() -> None:
-    "Clears the terminal."
-    system(SYSTEM_CLEAR_SCREEN_COMMAND)
+from types import ModuleType as module
+from typing import Any, Callable, Final, Iterator, Mapping, NoReturn
 
 
 class MenuExit(BaseException):
-    pass
+    "Base class for menu-closing exceptions."
+
+
+class StopMenu(MenuExit):
+    "Close the current menu."
+
+
+class BreakMenu(MenuExit):
+    "Close the current menu and re-raise this exception."
 
 
 class MenuOption(abc.Callable):
@@ -30,8 +28,6 @@ class MenuOption(abc.Callable):
             )
         elif not callable(action):
             raise TypeError("action must be a callable object")
-        elif signature(action).parameters:
-            raise ValueError("action must not have arguments")
         self.name: Final[str] = name
         self.action: Final[Callable[[], None]] = action
 
@@ -48,7 +44,11 @@ class MenuOption(abc.Callable):
         return self.name
 
 
-class StaticMenu(abc.Callable, abc.MutableMapping):
+class Menu(abc.Callable):
+    pass
+
+
+class StaticMenu(Menu, abc.MutableMapping):
     def __init__(self, title: str, options: Mapping[str, MenuOption]) -> None:
         if not isinstance(title, str):
             raise TypeError(
@@ -86,7 +86,7 @@ class StaticMenu(abc.Callable, abc.MutableMapping):
         return bytes(self.appearance)
 
     def __call__(self) -> None:
-        "Displays the menu and prompts the user to select an option. This repeats until a MenuExit is recieved."
+        "Displays the menu and prompts the user to select an option. This repeats until a StopMenu is recieved."
         try:
             while True:
                 clear_screen()
@@ -105,7 +105,7 @@ class StaticMenu(abc.Callable, abc.MutableMapping):
                         else:
                             break
                 selected_action()
-        except MenuExit:
+        except StopMenu:
             pass
 
     def __delitem__(self, key: str) -> None:
@@ -161,25 +161,36 @@ class StaticMenu(abc.Callable, abc.MutableMapping):
         return self.appearance
 
 
-class DynamicMenu(abc.Callable):
+class DynamicMenu(Menu):
     def __init__(
-        self, title_expression: code | str, options_expression: code | str
+        self,
+        title_expression: code | str,
+        options_expression: code | str,
+        global_context: dict[str, Any],
+        local_context: dict[str, Any],
     ) -> None:
         self.title_expr: Final[code | str] = title_expression
         self.options_expr: Final[code | str] = options_expression
+        self.globals: dict[str, Any] = global_context
+        self.locals: dict[str, Any] = local_context
 
     def generate_static(self) -> StaticMenu:
-        return StaticMenu(eval(self.title_expr), eval(self.options_expr))
+        return StaticMenu(
+            eval(self.title_expr, self.globals, self.locals),
+            eval(self.options_expr, self.globals, self.locals),
+        )
 
     def __bytes__(self) -> bytes:
         return bytes(self.generate_static())
 
     def __call__(self) -> None:
-        "Displays the menu and prompts the user to select an option. This repeats until a MenuExit is recieved."
+        "Displays the menu and prompts the user to select an option. This repeats until a StopMenu is recieved."
         try:
             while True:
-                title: str = eval(self.title_expr)
-                options: Mapping[str, MenuOption] = eval(self.options_expr)
+                title: str = eval(self.title_expr, self.globals, self.locals)
+                options: Mapping[str, MenuOption] = eval(
+                    self.options_expr, self.globals, self.locals
+                )
                 if not isinstance(title, str):
                     raise TypeError(
                         "title_expression must evaluate to type str (not "
@@ -236,7 +247,7 @@ class DynamicMenu(abc.Callable):
                         else:
                             break
                 selected_action()
-        except MenuExit:
+        except StopMenu:
             pass
 
     def __repr__(self) -> str:
@@ -252,66 +263,34 @@ class DynamicMenu(abc.Callable):
         return str(self.generate_static())
 
 
-def raise_menuexit() -> NoReturn:
-    raise MenuExit
+def raise_stop_menu() -> NoReturn:
+    raise StopMenu
 
 
-BACK_OPTION: Final[MenuOption] = MenuOption("BACK", raise_menuexit)
+def raise_break_menu() -> NoReturn:
+    raise BreakMenu
 
 
-def main():
-    def set_user_char_set(char_set: lib.settings.CharSet) -> None:
-        if not isinstance(char_set, lib.settings.CharSet):
-            raise ValueError(
-                "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
-            )
-        lib.settings.user_char_set = char_set
+def run_variant(path: str, confirm: bool = True) -> bool:
+    'Runs a variant. path is the import path of the variant relative to variants. confirm controls whether to display the standard "variant infobox". If the infobox is displayed, and the user cancels, returns False. Any unhandled exceptions within the variant\'s code are propogated. Otherwise, returns True.'
+    if not isinstance(path, str):
+        raise TypeError("path must be of type str (not " + type(path).__name__ + ")")
+    elif not isinstance(confirm, bool):
+        raise TypeError(
+            "confirm must be of type bool (not " + type(confirm).__name__ + ")"
+        )
+    variant_module: module = import_module("variants." + path)
+    if confirm:
+        raise NotImplementedError("variant infobox not yet created")
+    else:
+        variant_module.main()
+        return True
 
-    def option_info(info: str) -> None:
-        if not isinstance(info, str):
-            raise ValueError(
-                "info must be of type str (not " + type(info).__name__ + ")"
-            )
-        clear_screen()
-        input(info + "\n")
 
-    global CHAR_SET_INFO_OPTION
-    global CHAR_SET_ASCII_OPTION
-    global CHAR_SET_EXTENDED_OPTION
-    global CHAR_SET_FULL_OPTION
-    CHAR_SET_INFO_OPTION = MenuOption(
-        "ABOUT THIS OPTION",
-        partial(
-            option_info,
-            "Controls what characters are used in the game's output. A wider character range leads to nicer looking output, but also increases the risk of missing characters.\n\n - ASCII (COMPATIBILITY MODE, DEFAULT): Only allows letters, numbers, and other symbols found on a standard US keyboard. Most limited, but universally compatible.\n - EXTENDED (RECCOMENDED): Allows all characters in ASCII, alongside many additional characters included in default fonts on most operating systems. More varied, but less compatible.\n - FULL: Allows all possible characters. Most varied, but poor compatibility.",
-        ),
-    )
-    CHAR_SET_ASCII_OPTION = MenuOption(
-        "ASCII (COMPATIBILITY MODE, DEFAULT)",
-        partial(set_user_char_set, lib.settings.CharSet.ASCII),
-    )
-    CHAR_SET_EXTENDED_OPTION = MenuOption(
-        "EXTENDED (RECCOMENDED)",
-        partial(set_user_char_set, lib.settings.CharSet.EXTENDED),
-    )
-    CHAR_SET_FULL_OPTION = MenuOption(
-        "FULL", partial(set_user_char_set, lib.settings.CharSet.FULL)
-    )
-
-    StaticMenu(
-        "MAIN MENU",
-        {
-            "1": MenuOption(
-                "SETTINGS",
-                DynamicMenu(
-                    compile("'SETTINGS'", __file__, "eval"),
-                    compile(
-                        "{'1': MenuOption('CHARACTER SET: ' + lib.settings.user_char_set.name, DynamicMenu(compile(\"'CHARACTER SET: ' + lib.settings.user_char_set.name\", __file__, 'eval'), compile(\"{'?': CHAR_SET_INFO_OPTION, '1': CHAR_SET_ASCII_OPTION, '2': CHAR_SET_EXTENDED_OPTION, '3': CHAR_SET_FULL_OPTION, '<': BACK_OPTION}\", __file__, 'eval'))), '<': BACK_OPTION}",
-                        __file__,
-                        "eval",
-                    ),
-                ),
-            ),
-            "X": MenuOption("QUIT", raise_menuexit),
-        },
-    )()
+clear_screen: partial = partial(system, "cls" if os_name == "nt" else "clear")
+del os_name
+BACK_OPTION: Final[MenuOption] = MenuOption("BACK", raise_stop_menu)
+QUIT_VARIANT_OPTION: Final[MenuOption] = MenuOption(
+    "RETURN TO VARIANT MENU", raise_break_menu
+)
+RESUME_OPTION: Final[MenuOption] = MenuOption("RESUME", raise_stop_menu)

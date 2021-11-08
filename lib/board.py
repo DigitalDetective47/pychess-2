@@ -1,12 +1,16 @@
 import collections.abc as abc
-from enum import Enum, Flag
+from enum import Flag
 from enum import auto as enum_gen
-from typing import Any, Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
+from typing import (Any, Final, Iterator, Mapping, Optional, Sequence,
+                    SupportsIndex)
 
-CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
+from lib import pieces
+
+CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 FULLWIDTH_INVERTED_CHECKERBOARD: Final[str] = "\uFF03\uFF0E\n\uFF0E\uFF03"
 FULLWIDTH_STANDARD_CHECKERBOARD: Final[str] = "\uFF0E\uFF03\n\uFF03\uFF0E"
 INVERTED_CHECKERBOARD: Final[str] = "#.\n.#"
+NO_CASTLING_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
 STANDARD_CHECKERBOARD: Final[str] = ".#\n#."
 
 
@@ -17,25 +21,6 @@ def widen(value: str) -> str:
     ).replace(" ", "\u3000")
 
 
-class Color(Enum):
-    NEUTRAL = enum_gen()
-    WHITE = enum_gen()
-    BLACK = enum_gen()
-
-    def next(self):
-        if self == Color.NEUTRAL:
-            raise ValueError("Color NEUTRAL has no next color")
-        return {Color.WHITE: Color.BLACK, Color.BLACK: Color.WHITE}[self]
-
-    def __str__(self) -> str:
-        return {Color.NEUTRAL: "Neutral", Color.WHITE: "White", Color.BLACK: "Black"}[
-            self
-        ]
-
-
-PLAYER_COLORS: Final[frozenset[Color]] = frozenset({Color.WHITE, Color.BLACK})
-
-
 class CastlingRights(Flag):
     NONE = 0
     WHITE_KINGSIDE = enum_gen()
@@ -44,7 +29,7 @@ class CastlingRights(Flag):
     BLACK_QUEENSIDE = enum_gen()
 
 
-class Coordinate:
+class Coordinate(abc.Sequence):
     def __init__(self, position: str | Sequence[SupportsIndex]) -> None:
         if isinstance(position, str):
             if not 2 <= len(position) < 4:
@@ -121,8 +106,8 @@ class Coordinate:
             and -25 <= other[1].__index__() < 26
         ):
             coords: tuple[int, int] = (
-                self.pos[0] + other[0].__index__(),
-                self.pos[1] + other[1].__index__(),
+                self.file + other[0].__index__(),
+                self.rank + other[1].__index__(),
             )
             if 0 <= coords[0] < 26 and 0 <= coords[1] < 26:
                 return Coordinate(coords)
@@ -139,14 +124,20 @@ class Coordinate:
             else NotImplemented
         )
 
+    def __getitem__(self, key: int) -> int:
+        return self.pos[key]
+
     def __hash__(self) -> int:
-        return self.pos[0] + (self.pos[1] << 5)
+        return self.file + (self.rank << 5)
+
+    def __len__(self) -> int:
+        return 2
 
     def __repr__(self) -> str:
         return "Coordinate('" + str(self) + "')"
 
     def __str__(self) -> str:
-        return chr(self.pos[0] + 97) + str(self.pos[1] + 1)
+        return chr(self.file + 97) + str(self.rank + 1)
 
 
 class Board(abc.MutableMapping):
@@ -154,7 +145,7 @@ class Board(abc.MutableMapping):
         self,
         fen: str,
         piece_table: Mapping[str, type],
-        pawn_ranks: Mapping[Color, SupportsIndex] = {},
+        pawn_ranks: Mapping[pieces.Color, SupportsIndex] = {},
     ) -> None:
         if not isinstance(fen, str):
             raise TypeError(
@@ -191,15 +182,15 @@ class Board(abc.MutableMapping):
                 + ")"
             )
         for color, rank in pawn_ranks.items():
-            if not isinstance(color, Color):
+            if not isinstance(color, pieces.Color):
                 raise TypeError(
-                    "keys of pawn_ranks must be of type Color (not "
+                    "keys of pawn_ranks must be of type pieces.Color (not "
                     + type(color).__name__
                     + ")"
                 )
-            elif color not in PLAYER_COLORS:
+            elif color not in pieces.PLAYER_COLORS:
                 raise ValueError(
-                    "keys of pawn_ranks must be either Color.WHITE or Color.BLACK (not Color."
+                    "keys of pawn_ranks must be either pieces.Color.WHITE or pieces.Color.BLACK (not pieces.Color."
                     + color.name
                     + ")"
                 )
@@ -225,9 +216,9 @@ class Board(abc.MutableMapping):
                     pos: Coordinate = Coordinate((file, rank))
                     self.piece_array[pos] = piece_table[char.upper()](
                         pos,
-                        Color.BLACK
+                        pieces.Color.BLACK
                         if char.islower()
-                        else (Color.WHITE if char.isupper() else Color.NEUTRAL),
+                        else (pieces.Color.WHITE if char.isupper() else pieces.Color.NEUTRAL),
                         self,
                     )
                     file += 1
@@ -245,20 +236,20 @@ class Board(abc.MutableMapping):
         assert all(
             [pos == piece.pos for pos, piece in self.piece_array.items()]
         ), "position desync detected"
-        assert not any(
+        assert all(
             [
-                (pos.rank >= self.ranks or pos.file >= self.files)
+                (pos.file <= self.files and pos.rank <= self.ranks)
                 for pos in self.piece_array
             ]
         ), "piece exists outside of board edge"
         match fen_components[1]:
             case "w":
-                self.turn: Color = Color.WHITE
+                self.turn: pieces.Color = pieces.Color.WHITE
             case "b":
-                self.turn: Color = Color.BLACK
+                self.turn: pieces.Color = pieces.Color.BLACK
             case _:
                 raise ValueError("current turn must be either 'w' or 'b'")
-        self.first_player: Final[Color] = self.turn
+        self.first_player: Final[pieces.Color] = self.turn
         self.castling_rights: CastlingRights = CastlingRights.NONE
         if "K" in fen_components[2]:
             self.castling_rights |= CastlingRights.WHITE_KINGSIDE
@@ -273,21 +264,21 @@ class Board(abc.MutableMapping):
         )
         self.halfmove_clock: int = int(fen_components[4])
         self.fullmove_clock: int = int(fen_components[5])
-        pawn_ranks_mem: Mapping[Color, int]
+        pawn_ranks_mem: Mapping[pieces.Color, int]
         match pawn_ranks:
             case {}:
-                pawn_ranks_mem = {Color.WHITE: 1, Color.BLACK: self.ranks - 2}
-            case {Color.WHITE: white_pawn_rank}:
-                pawn_ranks_mem = pawn_ranks | {Color.BLACK: self.ranks - 1 - white_pawn_rank}
-            case {Color.BLACK: black_pawn_rank}:
-                pawn_ranks_mem = {Color.WHITE: self.ranks - 1 - black_pawn_rank} | pawn_ranks
-            case {Color.WHITE: _, Color.BLACK: _}:
+                pawn_ranks_mem = {pieces.Color.WHITE: 1, pieces.Color.BLACK: self.ranks - 2}
+            case {pieces.Color.WHITE: white_pawn_rank}:
+                pawn_ranks_mem = pawn_ranks | {pieces.Color.BLACK: self.ranks - 1 - white_pawn_rank}
+            case {pieces.Color.BLACK: black_pawn_rank}:
+                pawn_ranks_mem = {pieces.Color.WHITE: self.ranks - 1 - black_pawn_rank} | pawn_ranks
+            case {pieces.Color.WHITE: _, pieces.Color.BLACK: _}:
                 pawn_ranks_mem = pawn_ranks
             case _:
                 raise ValueError(
                     "severely malformed pawn_ranks Mapping (this error should not be able to appear, even in user code)"
                 )
-        self.pawn_ranks: Final[Mapping[Color, int]] = pawn_ranks_mem
+        self.pawn_ranks: Final[Mapping[pieces.Color, int]] = pawn_ranks_mem
 
     def __delitem__(self, key: Coordinate) -> None:
         del self.piece_array[key]
@@ -313,9 +304,9 @@ class Board(abc.MutableMapping):
 
     def render(
         self,
-        piece_symbols: Mapping[type, Mapping[Color, str]],
+        piece_symbols: Mapping[type, Mapping[pieces.Color, str]],
         checker_pattern: str,
-        perspective: Color,
+        perspective: pieces.Color,
         fullwidth: bool = False,
     ) -> str:
         "Returns a string representation of the board meant to be printed to the terminal."
@@ -333,9 +324,9 @@ class Board(abc.MutableMapping):
                     + ")"
                 )
             for color, symbol in piece_type.items():
-                if not isinstance(color, Color):
+                if not isinstance(color, pieces.Color):
                     raise TypeError(
-                        "keys of piece_symbols values must be of type Color (not "
+                        "keys of piece_symbols values must be of type pieces.Color (not "
                         + type(color).__name__
                         + ")"
                     )
@@ -351,9 +342,9 @@ class Board(abc.MutableMapping):
                 + type(checker_pattern).__name__
                 + ")"
             )
-        elif not isinstance(perspective, Color):
+        elif not isinstance(perspective, pieces.Color):
             raise TypeError(
-                "perspective must be of type Color (not "
+                "perspective must be of type pieces.Color (not "
                 + type(perspective).__name__
                 + ")"
             )
@@ -361,9 +352,9 @@ class Board(abc.MutableMapping):
             raise TypeError(
                 "fullwidth must be of type bool (not " + type(fullwidth).__name__ + ")"
             )
-        elif perspective not in PLAYER_COLORS:
+        elif perspective not in pieces.PLAYER_COLORS:
             raise ValueError(
-                "perspective must be either Color.WHITE or Color.BLACK (not "
+                "perspective must be either pieces.Color.WHITE or pieces.Color.BLACK (not "
                 + str(perspective)
                 + ")"
             )
@@ -375,7 +366,7 @@ class Board(abc.MutableMapping):
             rank_label_length + 1
         )
         perspective_ordering: Final[slice] = slice(
-            None, None, -1 if perspective == Color.BLACK else 1
+            None, None, -1 if perspective == pieces.Color.BLACK else None
         )
         file_labels: Final[str] = (
             "\uFF41\uFF42\uFF43\uFF44\uFF45\uFF46\uFF47\uFF48\uFF49\uFF4A\uFF4B\uFF4C\uFF4D\uFF4E\uFF4F\uFF50\uFF51\uFF52\uFF53\uFF54\uFF55\uFF56\uFF57\uFF58\uFF59\uFF5A"
@@ -399,7 +390,7 @@ class Board(abc.MutableMapping):
             board_str += current_rank_label
             for file in range(self.files)[perspective_ordering]:
                 try:
-                    current_piece = self.piece_array[Coordinate((file, rank))]
+                    current_piece = self[Coordinate((file, rank))]
                 except KeyError:
                     checker_rank = rank % len(checker_list)
                     board_str += checker_list[checker_rank][
@@ -411,14 +402,20 @@ class Board(abc.MutableMapping):
             if fullwidth:
                 current_rank_label = widen(current_rank_label)
             board_str += current_rank_label + "\n"
-        board_str += (
-            file_label_offset
+        return (
+            board_str
+            + file_label_offset
             + ("\uFF0D" if fullwidth else "-") * self.files
             + "\n"
             + file_label_offset
             + file_labels
         )
-        return board_str
 
     def __setitem__(self, key: Coordinate, value) -> None:
+        if not isinstance(key, Coordinate):
+            raise TypeError(
+                "Board keys must be of type Coordinate (not " + type(key).__name__ + ")"
+            )
+        elif key.file > self.files or key.rank > self.ranks:
+            raise IndexError("Board keys must point to spaces within the board")
         self.piece_array[key] = value
