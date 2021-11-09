@@ -224,11 +224,11 @@ def main() -> None:
         pass
 
 
-DECRIPTION: Final[
+DESCRIPTION: Final[
     str
 ] = "A board with no rules. The board can be resized, and pieces can be placed and removed at will."
 INVENTOR: Final[Optional[str]] = None
 LONG_NAME: Final[str] = "Sandbox Mode"
-PROGRAMMER: Final[Optional[str]] = "DigitalDetective47"
+PROGRAMMER: Final[str] = "DigitalDetective47"
 SETTINGS = {}
 SHORT_NAME: Final[str] = "SANDBOX"

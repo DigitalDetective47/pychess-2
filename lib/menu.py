@@ -5,7 +5,7 @@ from os import name as os_name
 from os import system
 from types import CodeType as code
 from types import ModuleType as module
-from typing import Any, Callable, Final, Iterator, Mapping, NoReturn
+from typing import Any, Callable, Final, Iterator, Mapping, NoReturn, Optional
 
 
 class MenuExit(BaseException):
@@ -280,8 +280,31 @@ def run_variant(path: str, confirm: bool = True) -> bool:
             "confirm must be of type bool (not " + type(confirm).__name__ + ")"
         )
     variant_module: module = import_module("variants." + path)
+    clear_screen()
     if confirm:
-        raise NotImplementedError("variant infobox not yet created")
+        user_input: Optional[str | bool] = None
+        while user_input not in frozenset({"Y", "N"}):
+            user_input = input(
+                "|"
+                + variant_module.LONG_NAME
+                + "\n|"
+                + (
+                    ""
+                    if variant_module.INVENTOR is None
+                    else "\n|Inventor: " + variant_module.INVENTOR
+                )
+                + "\n|Programmer: "
+                + variant_module.PROGRAMMER
+                + "\n|\n|"
+                + variant_module.DESCRIPTION
+                + "\n\nWould you like to play this variant (Y/N)? "
+                if user_input is None
+                else 'Type either "Y" or "N". '
+            )
+        user_input = user_input == "Y"
+        if user_input:
+            variant_module.main()
+        return user_input
     else:
         variant_module.main()
         return True
