@@ -1,10 +1,13 @@
 from functools import partial
 from io import BufferedRandom
+from os import chdir, path
 from pathlib import Path
 from typing import Final
 
 from lib import menu, settings
 
+chdir(path.dirname(path.abspath(__file__)))
+del chdir, path
 
 settings_file_path: Path = Path.cwd() / "config.pkl"
 settings_file: BufferedRandom
