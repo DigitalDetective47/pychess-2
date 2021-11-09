@@ -6,13 +6,6 @@ from typing import (Any, Final, Iterator, Mapping, Optional, Sequence,
 
 from lib import pieces
 
-CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-FULLWIDTH_INVERTED_CHECKERBOARD: Final[str] = "\uFF03\uFF0E\n\uFF0E\uFF03"
-FULLWIDTH_STANDARD_CHECKERBOARD: Final[str] = "\uFF0E\uFF03\n\uFF03\uFF0E"
-INVERTED_CHECKERBOARD: Final[str] = "#.\n.#"
-NO_CASTLING_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
-STANDARD_CHECKERBOARD: Final[str] = ".#\n#."
-
 
 def widen(value: str) -> str:
     "Replaces all ASCII characters in the string with their fullwidth forms as a new string and returns it."
@@ -409,6 +402,7 @@ class Board(abc.MutableMapping):
             + "\n"
             + file_label_offset
             + file_labels
+            + "\n"
         )
 
     def __setitem__(self, key: Coordinate, value) -> None:
@@ -419,3 +413,10 @@ class Board(abc.MutableMapping):
         elif key.file > self.files or key.rank > self.ranks:
             raise IndexError("Board keys must point to spaces within the board")
         self.piece_array[key] = value
+
+CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+FULLWIDTH_INVERTED_CHECKERBOARD: Final[str] = "\uFF03\uFF0E\n\uFF0E\uFF03"
+FULLWIDTH_STANDARD_CHECKERBOARD: Final[str] = "\uFF0E\uFF03\n\uFF03\uFF0E"
+INVERTED_CHECKERBOARD: Final[str] = "#.\n.#"
+NO_CASTLING_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w - - 0 1"
+STANDARD_CHECKERBOARD: Final[str] = ".#\n#."

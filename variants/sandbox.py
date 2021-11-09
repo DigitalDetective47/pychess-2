@@ -1,6 +1,6 @@
 from typing import Final, Optional
 
-from lib import pieces, board, menu
+from lib import pieces, board, menu, settings
 
 
 def main() -> None:
@@ -60,10 +60,24 @@ def main() -> None:
         "+<": menu.MenuOption("ADD FILE TO LEFT", add_file_left),
         "+>": menu.MenuOption("ADD FILE TO RIGHT", add_file_right),
     }
-
     ADD_RANK_ENTRIES: Final[dict[str, menu.MenuOption]] = {
         "+^": menu.MenuOption("ADD RANK TO TOP", add_rank_up),
         "+v": menu.MenuOption("ADD RANK TO BOTTOM", add_rank_down),
+    }
+    GAME_MENU_TRAILING_ENTRIES: Final[dict[str, menu.MenuOption]] = {
+        "X": menu.MenuOption("RETURN TO MAIN MENU", menu.raise_break_menu)
+    }
+    GAME_MENU_LEADING_ENTRIES: Final[dict[str, menu.MenuOption]] = {
+        "R": menu.RESUME_OPTION,
+        "F": menu.MenuOption("FLIP BOARD", flip_board),
+    }
+    REMOVE_FILE_ENTRIES: Final[dict[str, menu.MenuOption]] = {
+        "-<": menu.MenuOption("REMOVE FILE FROM LEFT", remove_file_left),
+        "->": menu.MenuOption("REMOVE FILE FROM RIGHT", remove_file_right),
+    }
+    REMOVE_RANK_ENTRIES: Final[dict[str, menu.MenuOption]] = {
+        "-^": menu.MenuOption("REMOVE RANK FROM TOP", remove_rank_up),
+        "-v": menu.MenuOption("REMOVE RANK FROM BOTTOM", remove_rank_down),
     }
 
     drop_location: board.Coordinate
@@ -104,34 +118,17 @@ def main() -> None:
     game_board[board.Coordinate("f8")].symbol = "b"
     game_board[board.Coordinate("g8")].symbol = "n"
     game_board[board.Coordinate("h8")].symbol = "r"
-    GAME_MENU_TRAILING_ENTRIES: Final[dict[str, menu.MenuOption]] = {
-        "X": menu.MenuOption("RETURN TO MAIN MENU", menu.raise_break_menu)
-    }
     input_error_prompt: str = ""
     move: str
     perspective: pieces.Color = pieces.Color.WHITE
-
-    GAME_MENU_LEADING_ENTRIES: Final[dict[str, menu.MenuOption]] = {
-        "R": menu.RESUME_OPTION,
-        "F": menu.MenuOption("FLIP BOARD", flip_board),
-    }
-
-    REMOVE_FILE_ENTRIES: Final[dict[str, menu.MenuOption]] = {
-        "-<": menu.MenuOption("REMOVE FILE FROM LEFT", remove_file_left),
-        "->": menu.MenuOption("REMOVE FILE FROM RIGHT", remove_file_right),
-    }
-
-    REMOVE_RANK_ENTRIES: Final[dict[str, menu.MenuOption]] = {
-        "-^": menu.MenuOption("REMOVE RANK FROM TOP", remove_rank_up),
-        "-v": menu.MenuOption("REMOVE RANK FROM BOTTOM", remove_rank_down),
-    }
-
     try:
         while True:
             if input_error_prompt == "":
-                checker_list: Final[
-                    list[str]
-                ] = board.STANDARD_CHECKERBOARD.splitlines()[::-1]
+                checker_list: Final[list[str]] = (
+                    board.INVERTED_CHECKERBOARD
+                    if settings.global_user_settings["dark_mode"]
+                    else board.STANDARD_CHECKERBOARD
+                ).splitlines()[::-1]
                 rank_label_length: Final[int] = (game_board.ranks >= 10) + 1
                 file_label_offset: Final[str] = " " * (rank_label_length + 1)
                 perspective_ordering: Final[slice] = slice(
@@ -170,6 +167,7 @@ def main() -> None:
                     + "\n"
                     + file_label_offset
                     + file_labels
+                    + "\n"
                 )
             move = input(input_error_prompt)
             if move == "menu":
@@ -226,8 +224,11 @@ def main() -> None:
         pass
 
 
-DECRIPTION: Final[str] = "A board with no rules. The board can be resized, and pieces can be placed and removed at will."
+DECRIPTION: Final[
+    str
+] = "A board with no rules. The board can be resized, and pieces can be placed and removed at will."
 INVENTOR: Final[Optional[str]] = None
 LONG_NAME: Final[str] = "Sandbox Mode"
 PROGRAMMER: Final[Optional[str]] = "DigitalDetective47"
+SETTINGS = {}
 SHORT_NAME: Final[str] = "SANDBOX"
