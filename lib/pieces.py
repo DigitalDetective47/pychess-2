@@ -86,15 +86,16 @@ class Piece:
             captured_piece: Optional[Piece] = self.board[dest]
         except KeyError:
             captured_piece = None
-            self.board.halfmove_clock += 1
-        else:
-            self.board.halfmove_clock = 0
         del self.board[self.pos]
         if promotion is None:
             self.pos = dest
             self.board[dest] = self
         else:
             self.board[dest] = promotion(dest, self.color, self.board)
+        if captured_piece is None:
+            self.board.increment_halfmove()
+        else:
+            self.board.reset_halfmove()
         return captured_piece
 
     def moves(self) -> frozenset[board.Coordinate]:
@@ -212,7 +213,7 @@ class Pawn(Piece):
                 + type(promotion).__name__
                 + ")"
             )
-        self.board.halfmove_clock = 0
+        self.board.reset_halfmove()
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
         if dest == self.board.en_passant:

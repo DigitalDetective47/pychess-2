@@ -1,8 +1,8 @@
 import collections.abc as abc
 from copy import copy as shallow_copy
-from enum import Flag
+from enum import Enum, Flag
 from enum import auto as enum_gen
-from typing import Any, Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
+from typing import Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
 
 from lib import pieces
 
@@ -12,6 +12,12 @@ def widen(value: str) -> str:
     return "".join(
         [(chr(ord(i) + 65248) if 33 <= ord(i) < 127 else i) for i in value]
     ).replace(" ", "\u3000")
+
+
+class BoardArchiveMode(Enum):
+    NONE = enum_gen()
+    PARTIAL = enum_gen()
+    FULL = enum_gen()
 
 
 class CastlingRights(Flag):
@@ -139,6 +145,7 @@ class Board(abc.MutableMapping):
         fen: str,
         piece_table: Mapping[str, type],
         pawn_ranks: Mapping[pieces.Color, SupportsIndex] = {},
+        archive_mode: BoardArchiveMode = BoardArchiveMode.PARTIAL,
     ) -> None:
         if not isinstance(fen, str):
             raise TypeError(
@@ -163,14 +170,20 @@ class Board(abc.MutableMapping):
                     + str(len(symbol))
                     + ")"
                 )
+        if not isinstance(archive_mode, BoardArchiveMode):
+            raise TypeError(
+                "archive_mode must be of type BoardArchiveMode (not "
+                + type(archive_mode).__name__
+                + ")"
+            )
         fen_components: Final[list[str]] = fen.split(" ")
         if len(fen_components) != 6:
             raise ValueError("fen parameter is not valid fen")
         rank_data: Final[list[str]] = fen_components[0].split("/")[::-1]
         self.ranks: Final[int] = len(rank_data)
-        if not (pawn_ranks is None or isinstance(pawn_ranks, Mapping)):
+        if not isinstance(pawn_ranks, Mapping):
             raise TypeError(
-                "pawn_ranks must be of type Mapping if specified (not "
+                "pawn_ranks must be of type Mapping (not "
                 + type(pawn_ranks).__name__
                 + ")"
             )
@@ -193,10 +206,11 @@ class Board(abc.MutableMapping):
                 raise ValueError("values of pawn_ranks must be within the board")
         if self.ranks > 26:
             raise ValueError("board cannot have more than 26 ranks")
-        num_files: int = -1
+        self.archive_mode: Final[BoardArchiveMode] = archive_mode
         digit_buffer: str = ""
         file: int
-        self._piece_array: dict[Coordinate, Any] = {}
+        num_files: Optional[int] = None
+        self._piece_array: dict[Coordinate] = {}
         for rank in range(self.ranks):
             file = 0
             for char in rank_data[rank]:
@@ -223,7 +237,7 @@ class Board(abc.MutableMapping):
                 file += int(digit_buffer)
                 digit_buffer = ""
             if file != num_files:
-                if num_files == -1:
+                if num_files is None:
                     num_files = file
                 else:
                     raise ValueError("board cannot have non-square shape")
@@ -282,6 +296,9 @@ class Board(abc.MutableMapping):
                     "severely malformed pawn_ranks Mapping (this error should not be able to appear, even in user code)"
                 )
         self.pawn_ranks: Final[dict[pieces.Color, int]] = pawn_ranks_mem
+        self.archives: list[BoardArchive] = (
+            [] if self.archive_mode is BoardArchiveMode.NONE else [BoardArchive(self)]
+        )
 
     def __delitem__(self, key: Coordinate) -> None:
         del self._piece_array[key]
@@ -297,6 +314,11 @@ class Board(abc.MutableMapping):
             if isinstance(other, Board)
             else NotImplemented
         )
+
+    def increment_halfmove(self) -> None:
+        self.halfmove_clock += 1
+        if self.archives is not BoardArchiveMode.NONE:
+            self.archives.append(BoardArchive(self))
 
     def __iter__(self) -> Iterator[Coordinate]:
         return iter(self._piece_array)
@@ -416,6 +438,11 @@ class Board(abc.MutableMapping):
             + file_labels
             + "\n"
         )
+
+    def reset_halfmove(self) -> None:
+        self.halfmove_clock = 0
+        if self.archive_mode is BoardArchiveMode.PARTIAL:
+            self.archives = [BoardArchive(self)]
 
     def __setitem__(self, key: Coordinate, value) -> None:
         if not isinstance(key, Coordinate):

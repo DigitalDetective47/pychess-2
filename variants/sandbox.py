@@ -85,6 +85,7 @@ def main() -> None:
     game_board: board.Board = board.Board(
         "--------/--------/8/8/8/8/--------/-------- w - - 0 1",
         pieces.STANDARD_PIECE_TABLE,
+        archive_mode=board.BoardArchiveMode.NONE,
     )
     game_board[board.Coordinate("a1")].symbol = "R"
     game_board[board.Coordinate("b1")].symbol = "N"
