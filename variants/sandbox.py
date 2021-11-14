@@ -1,4 +1,4 @@
-from typing import Final, Optional
+from typing import Callable, Final, Optional
 
 from lib import pieces, board, menu, settings
 
@@ -231,7 +231,7 @@ DESCRIPTION: Final[
 INVENTOR: Final[Optional[str]] = None
 LONG_NAME: Final[str] = "Sandbox Mode"
 PROGRAMMER: Final[str] = "DigitalDetective47"
-SETTINGS_MENU: Final[Optional[menu.Menu]] = None
+SETTINGS_MENU: Final[Optional[Callable[[], None]]] = None
 SHORT_NAME: str = "SANDBOX"
 UUID: Final[
     bytes
