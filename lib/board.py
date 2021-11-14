@@ -1,4 +1,5 @@
 import collections.abc as abc
+from copy import copy as shallow_copy
 from enum import Flag
 from enum import auto as enum_gen
 from typing import Any, Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
@@ -195,7 +196,7 @@ class Board(abc.MutableMapping):
         num_files: int = -1
         digit_buffer: str = ""
         file: int
-        self._piece_array: Mapping[Coordinate, Any] = {}
+        self._piece_array: dict[Coordinate, Any] = {}
         for rank in range(self.ranks):
             file = 0
             for char in rank_data[rank]:
@@ -287,10 +288,12 @@ class Board(abc.MutableMapping):
 
     def __eq__(self, other) -> bool:
         return (
-            self._piece_array == other._piece_array
-            and self.turn == other.turn
-            and self.castling_rights == other.castling_rights
+            self.castling_rights == other.castling_rights
+            and self.files == other.files
             and self.pawn_ranks == other.pawn_ranks
+            and self._piece_array == other._piece_array
+            and self.ranks == other.ranks
+            and self.turn == other.turn
             if isinstance(other, Board)
             else NotImplemented
         )
@@ -422,6 +425,45 @@ class Board(abc.MutableMapping):
         elif key.file > self.files or key.rank > self.ranks:
             raise IndexError("Board keys must point to spaces within the board")
         self._piece_array[key] = value
+
+
+class BoardArchive(abc.Mapping):
+    def __init__(self, source: Board) -> None:
+        if not isinstance(source, Board):
+            raise TypeError(
+                "source must be of type Board (not " + type(source).__name__ + ")"
+            )
+        self.castling_rights: Final[CastlingRights] = source.castling_rights
+        self.files: Final[int] = source.files
+        self.pawn_ranks: Final[dict[pieces.Color, int]] = source.pawn_ranks
+        self._piece_array: Final[dict[Coordinate]] = {}
+        for location, piece in source.items():
+            current_piece = shallow_copy(piece)
+            current_piece.board = self
+            self._piece_array[location] = current_piece
+        self.ranks: Final[int] = source.ranks
+        self.turn: Final[pieces.Color] = source.turn
+
+    def __eq__(self, other) -> bool:
+        return (
+            self.castling_rights == other.castling_rights
+            and self.files == other.files
+            and self.pawn_ranks == other.pawn_ranks
+            and self._piece_array == other._piece_array
+            and self.ranks == other.ranks
+            and self.turn == other.turn
+            if isinstance(other, Board | BoardArchive)
+            else NotImplemented
+        )
+
+    def __iter__(self) -> Iterator[Coordinate]:
+        return iter(self._piece_array)
+
+    def __getitem__(self, key: Coordinate):
+        return self._piece_array[key]
+
+    def __len__(self) -> int:
+        return len(self._piece_array)
 
 
 CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

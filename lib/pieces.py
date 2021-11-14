@@ -29,7 +29,10 @@ from lib import board
 
 class Piece:
     def __init__(
-        self, position: board.Coordinate, color: Color, board_ref: board.Board
+        self,
+        position: board.Coordinate,
+        color: Color,
+        board_ref: board.Board | board.BoardArchive,
     ) -> None:
         if not isinstance(position, board.Coordinate):
             raise TypeError(
@@ -41,13 +44,13 @@ class Piece:
             raise TypeError(
                 "color must be of type Color (not " + type(color).__name__ + ")"
             )
-        elif not isinstance(board_ref, board.Board):
+        elif not isinstance(board_ref, board.Board | board.BoardArchive):
             raise TypeError(
                 "board_ref must be of type Board (not " + type(board_ref).__name__ + ")"
             )
         self.pos: board.Coordinate = position
         self.color: Final[Color] = color
-        self.board: board.Board = board_ref
+        self.board: board.Board | board.BoardArchive = board_ref
 
     def attacked_by(self) -> frozenset:
         "Returns the set of all enemy pieces that can attack this piece."
