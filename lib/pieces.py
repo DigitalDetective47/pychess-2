@@ -74,13 +74,15 @@ class Piece:
         elif dest.file > self.board.files or dest.rank > self.board.ranks:
             raise IndexError("dest must be inside self.board")
         self.board.en_passant = None
-        self.board.halfmove_clock += 1
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
         try:
             captured_piece: Optional[Piece] = self.board[dest]
         except KeyError:
             captured_piece = None
+            self.board.halfmove_clock += 1
+        else:
+            self.board.halfmove_clock = 0
         del self.board[self.pos]
         if promotion is None:
             self.pos = dest
@@ -208,7 +210,7 @@ class Pawn(Piece):
                 + type(promotion).__name__
                 + ")"
             )
-        self.board.halfmove_clock += 1
+        self.board.halfmove_clock = 0
         self.board.turn = self.board.turn.next()
         self.board.fullmove_clock += self.board.turn == self.board.first_player
         if dest == self.board.en_passant:

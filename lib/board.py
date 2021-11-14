@@ -59,7 +59,7 @@ class Coordinate(abc.Sequence):
                 )
             elif not isinstance(position[1], SupportsIndex):
                 raise TypeError(
-                    "row index must be of an index type (not "
+                    "rank index must be of an index type (not "
                     + type(position[0]).__name__
                     + ")"
                 )
