@@ -10,17 +10,17 @@ class CharSet(Enum):
     FULL = enum_gen()
 
 
-global_user_settings: dict
+user_settings: dict[str]
 
 
 def read(file: BufferedRandom) -> None:
     "Loads the contents of the given file into user_settings."
-    global global_user_settings
-    global_user_settings = load(file)
+    global user_settings
+    user_settings = load(file)
     file.seek(0)
 
 
 def write(file: BufferedRandom) -> None:
     "Writes the current settings to the given file."
     file.truncate()
-    dump(global_user_settings, file, 5)
+    dump(user_settings, file, 5)

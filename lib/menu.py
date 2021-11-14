@@ -1,6 +1,5 @@
 import collections.abc as abc
 from functools import partial
-from importlib import import_module
 from os import name as os_name
 from os import system
 from types import CodeType as code
@@ -271,46 +270,9 @@ def raise_break_menu() -> NoReturn:
     raise BreakMenu
 
 
-def run_variant(path: str, confirm: bool = True) -> bool:
-    'Runs a variant. path is the import path of the variant relative to variants. confirm controls whether to display the standard "variant infobox". If the infobox is displayed, and the user cancels, returns False. Any unhandled exceptions within the variant\'s code are propogated. Otherwise, returns True.'
-    if not isinstance(path, str):
-        raise TypeError("path must be of type str (not " + type(path).__name__ + ")")
-    elif not isinstance(confirm, bool):
-        raise TypeError(
-            "confirm must be of type bool (not " + type(confirm).__name__ + ")"
-        )
-    variant_module: module = import_module("variants." + path)
-    clear_screen()
-    if confirm:
-        user_input: Optional[str | bool] = None
-        while user_input not in frozenset({"Y", "N"}):
-            user_input = input(
-                "|"
-                + variant_module.LONG_NAME
-                + "\n|"
-                + (
-                    ""
-                    if variant_module.INVENTOR is None
-                    else "\n|Inventor: " + variant_module.INVENTOR
-                )
-                + "\n|Programmer: "
-                + variant_module.PROGRAMMER
-                + "\n|\n|"
-                + variant_module.DESCRIPTION
-                + "\n\nWould you like to play this variant (Y/N)? "
-                if user_input is None
-                else 'Type either "Y" or "N". '
-            )
-        user_input = user_input == "Y"
-        if user_input:
-            variant_module.main()
-        return user_input
-    else:
-        variant_module.main()
-        return True
-
-
-clear_screen: partial = partial(system, "cls" if os_name == "nt" else "clear")
+clear_screen: Callable[[], None] = partial(
+    system, "cls" if os_name == "nt" else "clear"
+)
 del os_name
 BACK_OPTION: Final[MenuOption] = MenuOption("BACK", raise_stop_menu)
 QUIT_VARIANT_OPTION: Final[MenuOption] = MenuOption(

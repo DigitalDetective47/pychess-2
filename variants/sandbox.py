@@ -126,7 +126,7 @@ def main() -> None:
             if input_error_prompt == "":
                 checker_list: Final[list[str]] = (
                     board.INVERTED_CHECKERBOARD
-                    if settings.global_user_settings["dark_mode"]
+                    if settings.user_settings["global"]["dark_mode"]
                     else board.STANDARD_CHECKERBOARD
                 ).splitlines()[::-1]
                 rank_label_length: Final[int] = (game_board.ranks >= 10) + 1
@@ -174,7 +174,7 @@ def main() -> None:
                 menu.DynamicMenu(
                     compile("'IN-GAME MENU'", __file__, "eval"),
                     compile(
-                        "GAME_MENU_LEADING_ENTRIES | ({} if game_board.files == 26 else ADD_FILE_ENTRIES) | ({} if game_board.ranks == 26 else ADD_RANK_ENTRIES) | ({} if game_board.files == 1 else REMOVE_FILE_ENTRIES) | ({} if game_board.ranks == 0 else REMOVE_RANK_ENTRIES) | GAME_MENU_TRAILING_ENTRIES",
+                        "GAME_MENU_LEADING_ENTRIES | ({} if game_board.files == 26 else ADD_FILE_ENTRIES) | ({} if game_board.ranks == 26 else ADD_RANK_ENTRIES) | ({} if game_board.files == 1 else REMOVE_FILE_ENTRIES) | ({} if game_board.ranks == 1 else REMOVE_RANK_ENTRIES) | GAME_MENU_TRAILING_ENTRIES",
                         __file__,
                         "eval",
                     ),
@@ -224,11 +224,15 @@ def main() -> None:
         pass
 
 
+DEFAULT_VARIANT_SETTINGS: Final = {}
 DESCRIPTION: Final[
     str
 ] = "A board with no rules. The board can be resized, and pieces can be placed and removed at will."
 INVENTOR: Final[Optional[str]] = None
 LONG_NAME: Final[str] = "Sandbox Mode"
 PROGRAMMER: Final[str] = "DigitalDetective47"
-SETTINGS = {}
-SHORT_NAME: Final[str] = "SANDBOX"
+SETTINGS_MENU: Final[Optional[menu.Menu]] = None
+SHORT_NAME: str = "SANDBOX"
+UUID: Final[
+    bytes
+] = b"W\x7f\xc4\x83j\xbd_\xb5\xfa\x1f\xd5\x16'\x19\xac\x00\xde\xfc].8\x99O\xc7\xc2\xc9\xc4v\xf8>\xe76"
