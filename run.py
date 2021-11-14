@@ -85,7 +85,7 @@ try:
 except FileNotFoundError:
     temp_settings_file = open(settings_file_path, "x+b")
     settings.user_settings = {
-        "global": {
+        None: {
             "char_set": settings.CharSet.ASCII,
             "dark_mode": False,
         }
@@ -135,14 +135,14 @@ try:
             raise ValueError(
                 "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
             )
-        settings.user_settings["global"]["char_set"] = char_set
+        settings.user_settings[None]["char_set"] = char_set
 
     def set_dark_mode(value: bool) -> None:
         if not isinstance(value, bool):
             raise ValueError(
                 "value must be of type bool (not " + type(value).__name__ + ")"
             )
-        settings.user_settings["global"]["dark_mode"] = value
+        settings.user_settings[None]["dark_mode"] = value
 
     def variant_infobox(variant: module) -> None:
         if not isinstance(variant, module):
@@ -178,7 +178,7 @@ try:
 
     CHAR_SET_MENU: Final[menu.DynamicMenu] = menu.DynamicMenu(
         compile(
-            "'CHARACTER SET: ' + settings.user_settings['global']['char_set'].name",
+            "'CHARACTER SET: ' + settings.user_settings[None]['char_set'].name",
             __file__,
             "eval",
         ),
@@ -208,7 +208,7 @@ try:
 
     DARK_MODE_MENU: Final[menu.DynamicMenu] = menu.DynamicMenu(
         compile(
-            "'DARK MODE: ON' if settings.user_settings['global']['dark_mode'] else 'DARK MODE: OFF'",
+            "'DARK MODE: ON' if settings.user_settings[None]['dark_mode'] else 'DARK MODE: OFF'",
             __file__,
             "eval",
         ),
@@ -289,7 +289,7 @@ try:
                 menu.DynamicMenu(
                     compile("'SETTINGS'", __file__, "eval"),
                     compile(
-                        "{'1': menu.MenuOption('CHARACTER SET: ' + settings.user_settings['global']['char_set'].name, CHAR_SET_MENU), '2': menu.MenuOption('DARK MODE: ON' if settings.user_settings['global']['dark_mode'] else 'DARK MODE: OFF', DARK_MODE_MENU)} | ({} if all([variant.SETTINGS_MENU is None for variant in all_variants.values()]) else {'...': VARIANT_SPECIFIC_SETTINGS_MENU_OPTION}) | BACK_OPTION_DICT",
+                        "{'1': menu.MenuOption('CHARACTER SET: ' + settings.user_settings[None]['char_set'].name, CHAR_SET_MENU), '2': menu.MenuOption('DARK MODE: ON' if settings.user_settings[None]['dark_mode'] else 'DARK MODE: OFF', DARK_MODE_MENU)} | ({} if all([variant.SETTINGS_MENU is None for variant in all_variants.values()]) else {'...': VARIANT_SPECIFIC_SETTINGS_MENU_OPTION}) | BACK_OPTION_DICT",
                         __file__,
                         "eval",
                     ),

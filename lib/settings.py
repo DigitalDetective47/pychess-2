@@ -2,6 +2,7 @@ from enum import Enum
 from enum import auto as enum_gen
 from io import BufferedRandom
 from pickle import dump, load
+from typing import Optional
 
 
 class CharSet(Enum):
@@ -10,7 +11,7 @@ class CharSet(Enum):
     FULL = enum_gen()
 
 
-user_settings: dict[str]
+user_settings: dict[Optional[bytes]]
 
 
 def read(file: BufferedRandom) -> None:

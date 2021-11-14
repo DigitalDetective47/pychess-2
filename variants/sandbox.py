@@ -127,7 +127,7 @@ def main() -> None:
             if input_error_prompt == "":
                 checker_list: Final[list[str]] = (
                     board.INVERTED_CHECKERBOARD
-                    if settings.user_settings["global"]["dark_mode"]
+                    if settings.user_settings[None]["dark_mode"]
                     else board.STANDARD_CHECKERBOARD
                 ).splitlines()[::-1]
                 rank_label_length: Final[int] = (game_board.ranks >= 10) + 1
