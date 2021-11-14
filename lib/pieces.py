@@ -53,15 +53,18 @@ class Piece:
         "Returns the set of all enemy pieces that can attack this piece."
         attackers: set[Piece] = set()
         for rank, file in all_pairs(range(self.board.ranks), range(self.board.files)):
-            piece_of_interest = self.board.piece_array[
-                board.Coordinate((file, rank))
-            ]
+            piece_of_interest = self.board.piece_array[board.Coordinate((file, rank))]
             if (
                 self.color != piece_of_interest.color
                 and self.pos in piece_of_interest.moves()
             ):
                 attackers.add(piece_of_interest)
         return frozenset(attackers)
+
+    def __eq__(self, other) -> bool:
+        return (
+            self.color == other.color if type(self) == type(other) else NotImplemented
+        )
 
     def move(self, dest: board.Coordinate, promotion: Optional[type] = None):
         "Moves the piece to the given destination, and returns the piece that was captured, if any."
@@ -103,9 +106,7 @@ def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
     "Returns the location of a leap from the piece's position with an offset given if it is a legal position."
     if not isinstance(piece, Piece):
         raise TypeError(
-            "piece must be of type Piece (not "
-            + type(piece).__name__
-            + ")"
+            "piece must be of type Piece (not " + type(piece).__name__ + ")"
         )
     try:
         test_pos: board.Coordinate = piece.pos + step
@@ -120,9 +121,7 @@ def ride(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordin
     "Returns a line of empty spaces from the piece's position to the next occupied square or the edge of the board, using the step size given."
     if not isinstance(piece, Piece):
         raise TypeError(
-            "piece must be of type Piece (not "
-            + type(piece).__name__
-            + ")"
+            "piece must be of type Piece (not " + type(piece).__name__ + ")"
         )
     test_pos: board.Coordinate = piece.pos
     positions: set[board.Coordinate] = set()
@@ -342,9 +341,7 @@ STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
     "S": Nightrider,
     "-": Piece,
 }
-STANDARD_PIECE_SYMBOLS: Final[
-    dict[settings.CharSet, dict[type, dict[Color, str]]]
-] = {
+STANDARD_PIECE_SYMBOLS: Final[dict[settings.CharSet, dict[type, dict[Color, str]]]] = {
     settings.CharSet.ASCII: {
         Amazon: {Color.WHITE: "A", Color.BLACK: "a"},
         Bishop: {Color.WHITE: "B", Color.BLACK: "b"},
