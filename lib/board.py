@@ -233,7 +233,7 @@ class Board(abc.MutableMapping):
             [pos == piece.pos for pos, piece in self.piece_array.items()]
         ), "position desync detected"
         assert all(
-            [self == piece.board for piece in self.piece_array.values()]
+            [self is piece.board for piece in self.piece_array.values()]
         ), "board reference desync detected"
         assert all(
             [
@@ -241,11 +241,12 @@ class Board(abc.MutableMapping):
                 for pos in self.piece_array
             ]
         ), "piece exists outside of board edge"
+        self.turn: pieces.Color
         match fen_components[1]:
             case "w":
-                self.turn: pieces.Color = pieces.Color.WHITE
+                self.turn = pieces.Color.WHITE
             case "b":
-                self.turn: pieces.Color = pieces.Color.BLACK
+                self.turn = pieces.Color.BLACK
             case _:
                 raise ValueError("current turn must be either 'w' or 'b'")
         self.first_player: Final[pieces.Color] = self.turn
@@ -264,7 +265,7 @@ class Board(abc.MutableMapping):
         self.halfmove_clock: int = int(fen_components[4])
         self.fullmove_clock: int = int(fen_components[5])
         pawn_ranks_mem: Mapping[pieces.Color, int]
-        match pawn_ranks:
+        match dict(pawn_ranks):
             case {}:
                 pawn_ranks_mem = {pieces.Color.WHITE: 1, pieces.Color.BLACK: self.ranks - 2}
             case {pieces.Color.WHITE: white_pawn_rank}:
@@ -272,12 +273,14 @@ class Board(abc.MutableMapping):
             case {pieces.Color.BLACK: black_pawn_rank}:
                 pawn_ranks_mem = {pieces.Color.WHITE: self.ranks - 1 - black_pawn_rank} | pawn_ranks
             case {pieces.Color.WHITE: _, pieces.Color.BLACK: _}:
-                pawn_ranks_mem = pawn_ranks
+                pawn_ranks_mem = dict(pawn_ranks)
+            case {pieces.Color.BLACK: black_pawn_rank, pieces.Color.WHITE: white_pawn_rank}:
+                pawn_ranks_mem = {pieces.Color.WHITE: white_pawn_rank, pieces.Color.BLACK: black_pawn_rank}
             case _:
                 raise ValueError(
                     "severely malformed pawn_ranks Mapping (this error should not be able to appear, even in user code)"
                 )
-        self.pawn_ranks: Final[Mapping[pieces.Color, int]] = pawn_ranks_mem
+        self.pawn_ranks: Final[dict[pieces.Color, int]] = pawn_ranks_mem
 
     def __delitem__(self, key: Coordinate) -> None:
         del self.piece_array[key]
