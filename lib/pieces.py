@@ -332,18 +332,74 @@ class Rook(Piece):
         return sym_ride(self, (1, 0))
 
 
-STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
-    "A": Amazon,
-    "B": Bishop,
-    "C": Princess,
-    "K": King,
-    "N": Knight,
-    "M": Empress,
-    "P": Pawn,
-    "Q": Queen,
-    "R": Rook,
-    "S": Nightrider,
-    "-": Piece,
+DARK_MODE_PIECE_SYMBOLS: Final[dict[settings.CharSet, dict[type, dict[Color, str]]]] = {
+    settings.CharSet.ASCII: {
+        Amazon: {Color.WHITE: "A", Color.BLACK: "a"},
+        Bishop: {Color.WHITE: "B", Color.BLACK: "b"},
+        Empress: {Color.WHITE: "M", Color.BLACK: "m"},
+        King: {Color.WHITE: "K", Color.BLACK: "k"},
+        Knight: {Color.WHITE: "N", Color.BLACK: "n"},
+        Nightrider: {Color.WHITE: "S", Color.BLACK: "s"},
+        Pawn: {Color.WHITE: "P", Color.BLACK: "p"},
+        Piece: {Color.NEUTRAL: " "},
+        Princess: {Color.WHITE: "C", Color.BLACK: "c"},
+        Queen: {Color.WHITE: "Q", Color.BLACK: "q"},
+        Rook: {Color.WHITE: "R", Color.BLACK: "r"},
+    },
+    settings.CharSet.EXTENDED: {
+        Amazon: {Color.WHITE: "\uFF21", Color.BLACK: "\uFF41"},
+        Bishop: {Color.WHITE: "\u265D", Color.BLACK: "\u2657"},
+        Empress: {Color.WHITE: "\uFF2D", Color.BLACK: "\uFF2D"},
+        King: {Color.WHITE: "\u265A", Color.BLACK: "\u2654"},
+        Knight: {Color.WHITE: "\u265E", Color.BLACK: "\u2658"},
+        Nightrider: {Color.WHITE: "\uFF33", Color.BLACK: "\uFF53"},
+        Pawn: {Color.WHITE: "\u265F", Color.BLACK: "\u2659"},
+        Piece: {Color.NEUTRAL: "\u3000"},
+        Princess: {Color.WHITE: "\uFF23", Color.BLACK: "\uFF43"},
+        Queen: {Color.WHITE: "\u265B", Color.BLACK: "\u2655"},
+        Rook: {Color.WHITE: "\u265C", Color.BLACK: "\u2657"},
+    },
+    settings.CharSet.FULL: {
+        Amazon: {Color.WHITE: "\U0001FA51", Color.BLACK: "\U0001FA4E"},
+        Bishop: {
+            Color.NEUTRAL: "\U0001FA03",
+            Color.WHITE: "\u265D",
+            Color.BLACK: "\u2657",
+        },
+        Empress: {Color.WHITE: "\U0001FA52", Color.BLACK: "\U0001FA4F"},
+        King: {
+            Color.NEUTRAL: "\U0001FA00",
+            Color.WHITE: "\u265A",
+            Color.BLACK: "\u2654",
+        },
+        Knight: {
+            Color.NEUTRAL: "\U0001FA04",
+            Color.WHITE: "\u265E",
+            Color.BLACK: "\u2658",
+        },
+        Nightrider: {
+            Color.NEUTRAL: "\U0001FA2E",
+            Color.WHITE: "\U0001FA20",
+            Color.BLACK: "\U0001FA22",
+        },
+        Pawn: {
+            Color.NEUTRAL: "\U0001FA05",
+            Color.WHITE: "\u265F",
+            Color.BLACK: "\u2659",
+        },
+        Piece: {Color.NEUTRAL: "\u3000"},
+        Princess: {Color.WHITE: "\U0001FA53", Color.BLACK: "\U0001FA50"},
+        Queen: {
+            Color.NEUTRAL: "\U0001FA01",
+            Color.WHITE: "\u265B",
+            Color.BLACK: "\u2655",
+        },
+        Rook: {
+            Color.NEUTRAL: "\U0001FA02",
+            Color.WHITE: "\u265C",
+            Color.BLACK: "\u2657",
+        },
+    },
 }
 STANDARD_PIECE_SYMBOLS: Final[dict[settings.CharSet, dict[type, dict[Color, str]]]] = {
     settings.CharSet.ASCII: {
@@ -413,4 +469,17 @@ STANDARD_PIECE_SYMBOLS: Final[dict[settings.CharSet, dict[type, dict[Color, str]
             Color.BLACK: "\u265C",
         },
     },
+}
+STANDARD_PIECE_TABLE: Final[dict[str, type]] = {
+    "A": Amazon,
+    "B": Bishop,
+    "C": Princess,
+    "K": King,
+    "N": Knight,
+    "M": Empress,
+    "P": Pawn,
+    "Q": Queen,
+    "R": Rook,
+    "S": Nightrider,
+    "-": Piece,
 }
