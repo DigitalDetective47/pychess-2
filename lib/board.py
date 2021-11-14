@@ -195,7 +195,7 @@ class Board(abc.MutableMapping):
         num_files: int = -1
         digit_buffer: str = ""
         file: int
-        self.piece_array: Mapping[Coordinate, Any] = {}
+        self._piece_array: Mapping[Coordinate, Any] = {}
         for rank in range(self.ranks):
             file = 0
             for char in rank_data[rank]:
@@ -206,7 +206,7 @@ class Board(abc.MutableMapping):
                         file += int(digit_buffer)
                         digit_buffer = ""
                     pos: Coordinate = Coordinate((file, rank))
-                    self.piece_array[pos] = piece_table[char.upper()](
+                    self._piece_array[pos] = piece_table[char.upper()](
                         pos,
                         pieces.Color.BLACK
                         if char.islower()
@@ -230,15 +230,15 @@ class Board(abc.MutableMapping):
             raise ValueError("board cannot have more than 26 files")
         self.files: Final[int] = num_files
         assert all(
-            [pos == piece.pos for pos, piece in self.piece_array.items()]
+            [pos == piece.pos for pos, piece in self._piece_array.items()]
         ), "position desync detected"
         assert all(
-            [self is piece.board for piece in self.piece_array.values()]
+            [self is piece.board for piece in self._piece_array.values()]
         ), "board reference desync detected"
         assert all(
             [
                 (pos.file <= self.files and pos.rank <= self.ranks)
-                for pos in self.piece_array
+                for pos in self._piece_array
             ]
         ), "piece exists outside of board edge"
         self.turn: pieces.Color
@@ -283,11 +283,11 @@ class Board(abc.MutableMapping):
         self.pawn_ranks: Final[dict[pieces.Color, int]] = pawn_ranks_mem
 
     def __delitem__(self, key: Coordinate) -> None:
-        del self.piece_array[key]
+        del self._piece_array[key]
 
     def __eq__(self, other) -> bool:
         return (
-            self.piece_array == other.piece_array
+            self._piece_array == other._piece_array
             and self.turn == other.turn
             and self.castling_rights == other.castling_rights
             and self.pawn_ranks == other.pawn_ranks
@@ -296,13 +296,13 @@ class Board(abc.MutableMapping):
         )
 
     def __iter__(self) -> Iterator[Coordinate]:
-        return iter(self.piece_array)
+        return iter(self._piece_array)
 
     def __getitem__(self, key: Coordinate):
-        return self.piece_array[key]
+        return self._piece_array[key]
 
     def __len__(self) -> int:
-        return len(self.piece_array)
+        return len(self._piece_array)
 
     def render(
         self,
@@ -421,7 +421,7 @@ class Board(abc.MutableMapping):
             )
         elif key.file > self.files or key.rank > self.ranks:
             raise IndexError("Board keys must point to spaces within the board")
-        self.piece_array[key] = value
+        self._piece_array[key] = value
 
 
 CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"

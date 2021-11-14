@@ -53,7 +53,7 @@ class Piece:
         "Returns the set of all enemy pieces that can attack this piece."
         attackers: set[Piece] = set()
         for rank, file in all_pairs(range(self.board.ranks), range(self.board.files)):
-            piece_of_interest = self.board.piece_array[board.Coordinate((file, rank))]
+            piece_of_interest = self.board[board.Coordinate((file, rank))]
             if (
                 self.color != piece_of_interest.color
                 and self.pos in piece_of_interest.moves()
