@@ -93,6 +93,9 @@ class Piece:
         "Returns the set of all spaces that the piece can move to, excluding rules about check or self-capture."
         return frozenset()
 
+    def __repr__(self) -> str:
+        return type(self).__name__ + repr((self.pos, self.color, self.board))
+
 
 def leap(piece: Piece, step: Sequence[SupportsIndex]) -> frozenset[board.Coordinate]:
     "Returns the location of a leap from the piece's position with an offset given if it is a legal position."

@@ -127,7 +127,7 @@ class Coordinate(abc.Sequence):
         return 2
 
     def __repr__(self) -> str:
-        return "Coordinate('" + str(self) + "')"
+        return type(self).__name__ + "(" + repr(str(self)) + ")"
 
     def __str__(self) -> str:
         return chr(self.file + 97) + str(self.rank + 1)
