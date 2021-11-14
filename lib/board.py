@@ -1,8 +1,7 @@
 import collections.abc as abc
 from enum import Flag
 from enum import auto as enum_gen
-from typing import (Any, Final, Iterator, Mapping, Optional, Sequence,
-                    SupportsIndex)
+from typing import Any, Final, Iterator, Mapping, Optional, Sequence, SupportsIndex
 
 from lib import pieces
 
@@ -211,7 +210,11 @@ class Board(abc.MutableMapping):
                         pos,
                         pieces.Color.BLACK
                         if char.islower()
-                        else (pieces.Color.WHITE if char.isupper() else pieces.Color.NEUTRAL),
+                        else (
+                            pieces.Color.WHITE
+                            if char.isupper()
+                            else pieces.Color.NEUTRAL
+                        ),
                         self,
                     )
                     file += 1
@@ -229,6 +232,9 @@ class Board(abc.MutableMapping):
         assert all(
             [pos == piece.pos for pos, piece in self.piece_array.items()]
         ), "position desync detected"
+        assert all(
+            [self == piece.board for piece in self.piece_array.values()]
+        ), "board reference desync detected"
         assert all(
             [
                 (pos.file <= self.files and pos.rank <= self.ranks)
@@ -413,6 +419,7 @@ class Board(abc.MutableMapping):
         elif key.file > self.files or key.rank > self.ranks:
             raise IndexError("Board keys must point to spaces within the board")
         self.piece_array[key] = value
+
 
 CHESS_FEN: Final[str] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 FULLWIDTH_INVERTED_CHECKERBOARD: Final[str] = "\uFF03\uFF0E\n\uFF0E\uFF03"
