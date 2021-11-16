@@ -25,3 +25,4 @@ def write(file: BufferedRandom) -> None:
     "Writes the current settings to the given file."
     file.truncate()
     dump(user_settings, file, 5)
+    file.seek(0)

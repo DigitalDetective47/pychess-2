@@ -136,6 +136,7 @@ try:
                 "char_set must be of type CharSet (not " + type(char_set).__name__ + ")"
             )
         settings.user_settings[None]["char_set"] = char_set
+        settings.write(settings_file)
 
     def set_dark_mode(value: bool) -> None:
         if not isinstance(value, bool):
@@ -143,6 +144,7 @@ try:
                 "value must be of type bool (not " + type(value).__name__ + ")"
             )
         settings.user_settings[None]["dark_mode"] = value
+        settings.write(settings_file)
 
     def variant_infobox(variant: module) -> None:
         if not isinstance(variant, module):
@@ -301,5 +303,4 @@ try:
         },
     )()
 finally:
-    settings.write(settings_file)
     settings_file.close()
