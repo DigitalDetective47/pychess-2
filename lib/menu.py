@@ -3,8 +3,7 @@ from functools import partial
 from os import name as os_name
 from os import system
 from types import CodeType as code
-from types import ModuleType as module
-from typing import Any, Callable, Final, Iterator, Mapping, NoReturn, Optional
+from typing import Any, Callable, Final, Iterator, Mapping, NoReturn
 
 
 class MenuExit(BaseException):
