@@ -136,7 +136,7 @@ class StaticMenu(CallableABC, MutableMappingABC):
         try:
             while True:
                 clear_screen()
-                print(f"{self}\n\n")
+                print(f"{self}\n")
                 selected_option: MenuOption
                 options: dict[str, MenuOption] = dict(self)
                 try:
@@ -260,7 +260,7 @@ class DynamicMenu(CallableABC):
                 for index, option in options.items():
                     appearance += f"\n{index.rjust(menu_option_width)}|{option}"
                 clear_screen()
-                print(f"{appearance}\n\n")
+                print(f"{appearance}\n")
                 selected_option: MenuOption
                 try:
                     selected_option = options[input()]

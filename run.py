@@ -12,9 +12,6 @@ from lib import menu, settings
 
 
 def main() -> None:
-    # Set working directory to location of run.py
-    chdir(path.dirname(path.abspath(__file__)))
-
     # Load all variants
     unsorted_builtin_variants: Final[dict[str, module]] = {}
     full_name: str
@@ -39,14 +36,6 @@ def main() -> None:
     )
     user_variants: Final[dict[str, module]] = sorted_variants(unsorted_user_variants)
     all_variants: Final[dict[str, module]] = builtin_variants | user_variants
-    del (
-        file_path,
-        full_name,
-        truncated_name,
-        unfiltered_name,
-        unsorted_builtin_variants,
-        unsorted_user_variants,
-    )
 
     # Disambiguate any shared short names
     fixed_names_flags: Final[list[bool]] = [False] * len(all_variants)
@@ -57,23 +46,27 @@ def main() -> None:
         variant_name = variants_tuple[len(unique_names)].SHORT_NAME
         if variant_name in unique_names:
             unique_names = set()
-            for variant, internal_variant_name, is_name_fixed, variant_index in zip(
-                variants_tuple,
-                all_variants,
-                fixed_names_flags,
-                range(len(all_variants)),
-                strict=True,
+            for variant_index, (
+                variant,
+                internal_variant_name,
+                is_name_fixed,
+            ) in enumerate(
+                zip(
+                    variants_tuple,
+                    all_variants,
+                    fixed_names_flags,
+                    strict=True,
+                )
             ):
                 if not is_name_fixed and variant.SHORT_NAME == variant_name:
                     variant.SHORT_NAME += (
-                        (" (" + internal_variant_name.split(".", 1)[0].upper() + ")")
+                        f" ({internal_variant_name.split('.', 1)[0].upper()})"
                         if "." in internal_variant_name
                         else " (BUILT-IN)"
                     )
                     fixed_names_flags[variant_index] = True
         else:
             unique_names.add(variant_name)
-    del fixed_names_flags, variant_name, variants_tuple, unique_names
 
     # Load settings file
     settings_file_path: Final[Path] = Path.cwd() / "config.pkl"
@@ -90,7 +83,6 @@ def main() -> None:
     except FileExistsError:
         pass
     with open(settings_file_path, "r+b") as settings_file:
-        del settings_file_path
         settings.read(settings_file)
 
         # Add variant settings to settings file if not already added
@@ -98,17 +90,9 @@ def main() -> None:
             if variant.UUID not in settings.user_settings:
                 settings.user_settings[variant.UUID] = variant.DEFAULT_VARIANT_SETTINGS
             del variant.DEFAULT_VARIANT_SETTINGS
-        del variant
 
         def letter_index(number: SupportsIndex) -> str:
-            try:
-                value: int = number.__index__() + 1
-            except AttributeError:
-                raise TypeError(
-                    "number must be of type SupportsIndex (not "
-                    + type(number).__name__
-                    + ")"
-                )
+            value: int = number.__index__() + 1
             letters: Final[list[str]] = []
             remainder: int
             while value > 0:
@@ -120,55 +104,27 @@ def main() -> None:
             return "".join(reversed(letters))
 
         def option_info(info: str) -> None:
-            if not isinstance(info, str):
-                raise ValueError(
-                    "info must be of type str (not " + type(info).__name__ + ")"
-                )
             menu.clear_screen()
             input(info + "\n")
 
         def set_char_set(char_set: settings.CharSet) -> None:
-            if not isinstance(char_set, settings.CharSet):
-                raise ValueError(
-                    "char_set must be of type CharSet (not "
-                    + type(char_set).__name__
-                    + ")"
-                )
             settings.user_settings[None]["char_set"] = char_set
             settings.write(settings_file)
 
         def set_dark_mode(value: bool) -> None:
-            if not isinstance(value, bool):
-                raise ValueError(
-                    "value must be of type bool (not " + type(value).__name__ + ")"
-                )
             settings.user_settings[None]["dark_mode"] = value
             settings.write(settings_file)
 
         def variant_infobox(variant: module) -> None:
-            if not isinstance(variant, module):
-                raise TypeError(
-                    "variant must be of type ModuleType (not "
-                    + type(variant).__name__
-                    + ")"
-                )
             user_input: Optional[str] = None
             menu.clear_screen()
             while user_input not in frozenset({"N", "Y"}):
                 user_input = input(
-                    "|"
-                    + variant.LONG_NAME
-                    + "\n|"
-                    + (
-                        ""
+                    (
+                        f"|{variant.LONG_NAME}\n|\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
                         if variant.INVENTOR is None
-                        else "\n|Inventor: " + variant.INVENTOR
+                        else f"|{variant.LONG_NAME}\n|\n|Inventor: {variant.INVENTOR}\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
                     )
-                    + "\n|Programmer: "
-                    + variant.PROGRAMMER
-                    + "\n|\n|"
-                    + variant.DESCRIPTION
-                    + "\n\nWould you like to play this variant (Y/N)? "
                     if user_input is None
                     else 'Type either "Y" or "N". '
                 )
@@ -179,7 +135,7 @@ def main() -> None:
 
         CHAR_SET_MENU: Final[menu.DynamicMenu] = menu.DynamicMenu(
             compile(
-                "'CHARACTER SET: ' + settings.user_settings[None]['char_set'].name",
+                "f'CHARACTER SET: {settings.user_settings[None][\"char_set\"].name}'",
                 __file__,
                 "eval",
             ),
@@ -237,22 +193,14 @@ def main() -> None:
                     letter_index(variant_id): menu.MenuOption(
                         variant.SHORT_NAME, variant.SETTINGS_MENU
                     )
-                    for variant_id, variant in zip(
-                        range(len(builtin_variants)),
-                        builtin_variants.values(),
-                        strict=True,
-                    )
+                    for variant_id, variant in enumerate(builtin_variants.values())
                     if variant.SETTINGS_MENU is not None
                 }
                 | {
-                    str(variant_id): menu.MenuOption(
+                    str(variant_id + 1): menu.MenuOption(
                         variant.SHORT_NAME, variant.SETTINGS_MENU
                     )
-                    for variant_id, variant in zip(
-                        range(1, len(user_variants) + 1),
-                        user_variants.values(),
-                        strict=True,
-                    )
+                    for variant_id, variant in enumerate(user_variants.values())
                     if variant.SETTINGS_MENU is not None
                 }
                 | BACK_OPTION_DICT,
@@ -267,14 +215,12 @@ def main() -> None:
                     menu.StaticMenu(
                         "PLAY VARIANT",
                         {
-                            str(variant_id): menu.MenuOption(
+                            str(variant_id + 1): menu.MenuOption(
                                 variant_module.SHORT_NAME,
                                 partial(variant_infobox, variant_module),
                             )
-                            for variant_id, variant_module in zip(
-                                range(1, len(user_variants) + 1),
-                                user_variants.values(),
-                                strict=True,
+                            for variant_id, variant_module in enumerate(
+                                user_variants.values()
                             )
                         }
                         | {"<": menu.BACK_OPTION},
@@ -286,7 +232,7 @@ def main() -> None:
                     menu.DynamicMenu(
                         compile("'SETTINGS'", __file__, "eval"),
                         compile(
-                            "{'1': menu.MenuOption('CHARACTER SET: ' + settings.user_settings[None]['char_set'].name, CHAR_SET_MENU), '2': menu.MenuOption('DARK MODE: ON' if settings.user_settings[None]['dark_mode'] else 'DARK MODE: OFF', DARK_MODE_MENU)} | ({} if all([variant.SETTINGS_MENU is None for variant in all_variants.values()]) else {'...': VARIANT_SPECIFIC_SETTINGS_MENU_OPTION}) | BACK_OPTION_DICT",
+                            "{'1': menu.MenuOption(f'CHARACTER SET: {settings.user_settings[None][\"char_set\"].name}', CHAR_SET_MENU), '2': menu.MenuOption('DARK MODE: ON' if settings.user_settings[None]['dark_mode'] else 'DARK MODE: OFF', DARK_MODE_MENU)} | ({} if all([variant.SETTINGS_MENU is None for variant in all_variants.values()]) else {'...': VARIANT_SPECIFIC_SETTINGS_MENU_OPTION}) | BACK_OPTION_DICT",
                             __file__,
                             "eval",
                         ),
@@ -300,4 +246,6 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    # Set working directory to location of run.py
+    chdir(path.dirname(path.abspath(__file__)))
     main()
