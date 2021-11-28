@@ -232,8 +232,8 @@ DESCRIPTION: Final[
 INVENTOR: Final[Optional[str]] = None
 LONG_NAME: Final[str] = "Sandbox Mode"
 PROGRAMMER: Final[str] = "DigitalDetective47"
-SETTINGS_MENU: Final[Optional[Callable[[], None]]] = None
+SETTINGS_MENU: Final[Optional[Callable]] = None
 SHORT_NAME: str = "SANDBOX"
 UUID: Final[
     bytes
-] = b"W\x7f\xc4\x83j\xbd_\xb5\xfa\x1f\xd5\x16'\x19\xac\x00\xde\xfc].8\x99O\xc7\xc2\xc9\xc4v\xf8>\xe76"
+] = b"W\x7F\xC4\x83j\xBD_\xB5\xFA\x1F\xD5\x16'\x19\xAC\x00\xDE\xFC].8\x99O\xC7\xC2\xC9\xC4v\xF8>\xE76"
