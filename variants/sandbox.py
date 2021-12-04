@@ -10,9 +10,21 @@ def main() -> None:
             game_board.values(), key=lambda x: x.pos.file, reverse=True
         ):
             game_board[piece.pos].move(piece.pos + (1, 0))
+        nonlocal board_top_bottom_border
+        nonlocal file_labels
+        board_top_bottom_border = "-" * game_board.files
+        file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
+            perspective_ordering
+        ]
 
     def add_file_right() -> None:
         game_board.files += 1
+        nonlocal board_top_bottom_border
+        nonlocal file_labels
+        board_top_bottom_border = "-" * game_board.files
+        file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
+            perspective_ordering
+        ]
 
     def add_rank_down() -> None:
         game_board.ranks += 1
@@ -20,13 +32,32 @@ def main() -> None:
             game_board.values(), key=lambda x: x.pos.rank, reverse=True
         ):
             game_board[piece.pos].move(piece.pos + (0, 1))
+        if game_board.ranks == 10:
+            nonlocal file_label_offset
+            nonlocal rank_label_length
+            file_label_offset = "   "
+            rank_label_length = 2
 
     def add_rank_up() -> None:
         game_board.ranks += 1
+        if game_board.ranks == 10:
+            nonlocal file_label_offset
+            nonlocal rank_label_length
+            file_label_offset = "   "
+            rank_label_length = 2
 
     def flip_board() -> None:
-        nonlocal perspective
-        perspective = perspective.next()
+        nonlocal perspective_ordering
+        perspective_ordering = {
+            slice(None): slice(None, None, -1),
+            slice(None, None, -1): slice(None),
+        }[perspective_ordering]
+        nonlocal board_top_bottom_border
+        nonlocal file_labels
+        board_top_bottom_border = "-" * game_board.files
+        file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
+            perspective_ordering
+        ]
 
     def remove_file_left() -> None:
         for piece in sorted(game_board.values(), key=lambda x: x.pos.file):
@@ -35,12 +66,22 @@ def main() -> None:
             else:
                 game_board[piece.pos].move(piece.pos + (-1, 0))
         game_board.files -= 1
+        nonlocal board_top_bottom_border
+        nonlocal file_labels
+        board_top_bottom_border = "-" * game_board.files
+        file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
+            perspective_ordering
+        ]
 
     def remove_file_right() -> None:
         for piece in game_board.values():
             if piece.pos.file == game_board.files:
                 del game_board[piece.pos]
         game_board.files -= 1
+        nonlocal file_labels
+        file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
+            perspective_ordering
+        ]
 
     def remove_rank_down() -> None:
         for piece in sorted(game_board.values(), key=lambda x: x.pos.rank):
@@ -49,12 +90,22 @@ def main() -> None:
             else:
                 game_board[piece.pos].move(piece.pos + (0, -1))
         game_board.ranks -= 1
+        if game_board.ranks == 9:
+            nonlocal file_label_offset
+            nonlocal rank_label_length
+            file_label_offset = "  "
+            rank_label_length = 1
 
     def remove_rank_up() -> None:
         for piece in game_board.values():
             if piece.pos.rank == game_board.ranks:
                 del game_board[piece.pos]
         game_board.ranks -= 1
+        if game_board.ranks == 9:
+            nonlocal file_label_offset
+            nonlocal rank_label_length
+            file_label_offset = "  "
+            rank_label_length = 1
 
     ADD_FILE_ENTRIES: Final[dict[str, menu.MenuOption]] = {
         "+<": menu.MenuOption("ADD FILE TO LEFT", add_file_left),
@@ -64,6 +115,11 @@ def main() -> None:
         "+^": menu.MenuOption("ADD RANK TO TOP", add_rank_up),
         "+v": menu.MenuOption("ADD RANK TO BOTTOM", add_rank_down),
     }
+    checker_list: Final[list[str]] = (
+        board.INVERTED_CHECKERBOARD
+        if settings.user_settings[None]["dark_mode"]
+        else board.STANDARD_CHECKERBOARD
+    ).splitlines()[::-1]
     GAME_MENU_TRAILING_ENTRIES: Final[dict[str, menu.MenuOption]] = {
         "X": menu.MenuOption("RETURN TO MAIN MENU", menu.raise_break_menu)
     }
@@ -80,7 +136,10 @@ def main() -> None:
         "-v": menu.MenuOption("REMOVE RANK FROM BOTTOM", remove_rank_down),
     }
 
+    board_top_bottom_border: str = "--------"
     drop_location: board.Coordinate
+    file_label_offset: str = "  "
+    file_labels: str = "abcdefgh"
     first_coordinate_length: int
     game_board: board.Board = board.Board(
         "--------/--------/8/8/8/8/--------/-------- w - - 0 1",
@@ -121,37 +180,18 @@ def main() -> None:
     game_board[board.Coordinate("h8")].symbol = "r"
     input_error_prompt: str = ""
     move: str
-    perspective: pieces.Color = pieces.Color.WHITE
+    perspective_ordering: slice = slice(None)
+    rank_label_length: int = 1
     try:
         while True:
             if input_error_prompt == "":
-                checker_list: Final[list[str]] = (
-                    board.INVERTED_CHECKERBOARD
-                    if settings.user_settings[None]["dark_mode"]
-                    else board.STANDARD_CHECKERBOARD
-                ).splitlines()[::-1]
-                rank_label_length: Final[int] = (game_board.ranks >= 10) + 1
-                file_label_offset: Final[str] = " " * (rank_label_length + 1)
-                perspective_ordering: Final[slice] = slice(
-                    None, None, -1 if perspective == pieces.Color.BLACK else None
-                )
-                file_labels: Final[str] = "abcdefghijklmnopqrstuvwxyz"[
-                    : game_board.files
-                ][perspective_ordering]
-                board_str: str = (
-                    file_label_offset
-                    + file_labels
-                    + "\n"
-                    + file_label_offset
-                    + "-" * game_board.files
-                    + "\n"
-                )
+                board_str: str = f"{file_label_offset}{file_labels}\n{file_label_offset}{board_top_bottom_border}\n"
                 checker_rank: int
-                for rank in range(game_board.ranks)[perspective_ordering][::-1]:
-                    board_str += str(rank + 1).rjust(rank_label_length) + "|"
+                for rank in reversed(range(game_board.ranks)[perspective_ordering]):
+                    board_str += f"{str(rank + 1).rjust(rank_label_length)}|"
                     for file in range(game_board.files)[perspective_ordering]:
                         try:
-                            current_piece = game_board[board.Coordinate((file, rank))]
+                            current_piece = game_board[board.Coordinate(file, rank)]
                         except KeyError:
                             checker_rank = rank % len(checker_list)
                             board_str += checker_list[checker_rank][
@@ -159,16 +199,10 @@ def main() -> None:
                             ]
                         else:
                             board_str += current_piece.symbol
-                    board_str += "|" + str(rank + 1) + "\n"
+                    board_str += f"|{rank + 1}\n"
                 menu.clear_screen()
                 print(
-                    board_str
-                    + file_label_offset
-                    + "-" * game_board.files
-                    + "\n"
-                    + file_label_offset
-                    + file_labels
-                    + "\n"
+                    f"{board_str}{file_label_offset}{board_top_bottom_border}\n{file_label_offset}{file_labels}\n"
                 )
             move = input(input_error_prompt)
             if move == "menu":
