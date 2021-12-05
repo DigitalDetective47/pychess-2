@@ -1,11 +1,11 @@
 from typing import Callable, Final, Optional
 
-from lib import pieces, board, menu, settings
+from lib import board, menu, pieces, settings
 
 
 def main() -> None:
     def add_file_left() -> None:
-        game_board.files += 1
+        game_board._files += 1
         for piece in sorted(
             game_board.values(), key=lambda x: x.pos.file, reverse=True
         ):
@@ -18,7 +18,7 @@ def main() -> None:
         ]
 
     def add_file_right() -> None:
-        game_board.files += 1
+        game_board._files += 1
         nonlocal board_top_bottom_border
         nonlocal file_labels
         board_top_bottom_border = "-" * game_board.files
@@ -27,7 +27,7 @@ def main() -> None:
         ]
 
     def add_rank_down() -> None:
-        game_board.ranks += 1
+        game_board._ranks += 1
         for piece in sorted(
             game_board.values(), key=lambda x: x.pos.rank, reverse=True
         ):
@@ -39,7 +39,7 @@ def main() -> None:
             rank_label_length = 2
 
     def add_rank_up() -> None:
-        game_board.ranks += 1
+        game_board._ranks += 1
         if game_board.ranks == 10:
             nonlocal file_label_offset
             nonlocal rank_label_length
@@ -48,10 +48,11 @@ def main() -> None:
 
     def flip_board() -> None:
         nonlocal perspective_ordering
-        perspective_ordering = {
-            slice(None): slice(None, None, -1),
-            slice(None, None, -1): slice(None),
-        }[perspective_ordering]
+        perspective_ordering = (
+            slice(None)
+            if perspective_ordering == slice(None, None, -1)
+            else slice(None, None, -1)
+        )
         nonlocal board_top_bottom_border
         nonlocal file_labels
         board_top_bottom_border = "-" * game_board.files
@@ -65,7 +66,7 @@ def main() -> None:
                 del game_board[piece.pos]
             else:
                 game_board[piece.pos].move(piece.pos + (-1, 0))
-        game_board.files -= 1
+        game_board._files -= 1
         nonlocal board_top_bottom_border
         nonlocal file_labels
         board_top_bottom_border = "-" * game_board.files
@@ -77,7 +78,7 @@ def main() -> None:
         for piece in game_board.values():
             if piece.pos.file == game_board.files:
                 del game_board[piece.pos]
-        game_board.files -= 1
+        game_board._files -= 1
         nonlocal file_labels
         file_labels = "abcdefghijklmnopqrstuvwxyz"[: game_board.files][
             perspective_ordering
@@ -89,7 +90,7 @@ def main() -> None:
                 del game_board[piece.pos]
             else:
                 game_board[piece.pos].move(piece.pos + (0, -1))
-        game_board.ranks -= 1
+        game_board._ranks -= 1
         if game_board.ranks == 9:
             nonlocal file_label_offset
             nonlocal rank_label_length
@@ -100,7 +101,7 @@ def main() -> None:
         for piece in game_board.values():
             if piece.pos.rank == game_board.ranks:
                 del game_board[piece.pos]
-        game_board.ranks -= 1
+        game_board._ranks -= 1
         if game_board.ranks == 9:
             nonlocal file_label_offset
             nonlocal rank_label_length

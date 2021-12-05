@@ -489,7 +489,9 @@ class Board(MutableMappingABC):
                         file % len(checker_list[checker_rank])
                     ]
                 else:
-                    board_str += piece_symbols[frozenset({type(current_piece), current_piece.color})]
+                    board_str += piece_symbols[
+                        frozenset({type(current_piece), current_piece.color})
+                    ]
             current_rank_label = f"|{rank + 1}"
             if fullwidth:
                 current_rank_label = widen(current_rank_label)

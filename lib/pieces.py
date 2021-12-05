@@ -158,7 +158,7 @@ class Piece:
         return set()
 
     def __repr__(self) -> str:
-        return type(self).__name__ + repr((self.pos, self.color, self.board))
+        return f"{type(self).__name__}({self.pos!r}, {self.color!r}, {self.board!r})"
 
 
 def leap(piece: Piece, step: Sequence[SupportsIndex]) -> set[board.Coordinate]:

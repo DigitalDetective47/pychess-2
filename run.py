@@ -51,12 +51,7 @@ def main() -> None:
                 internal_variant_name,
                 is_name_fixed,
             ) in enumerate(
-                zip(
-                    variants_tuple,
-                    all_variants,
-                    fixed_names_flags,
-                    strict=True,
-                )
+                zip(variants_tuple, all_variants, fixed_names_flags, strict=True)
             ):
                 if not is_name_fixed and variant.SHORT_NAME == variant_name:
                     variant.SHORT_NAME += (
@@ -74,10 +69,7 @@ def main() -> None:
     try:
         with open(settings_file_path, "x+b") as settings_file:
             settings.user_settings = {
-                None: {
-                    "char_set": settings.CharSet.ASCII,
-                    "dark_mode": False,
-                }
+                None: {"char_set": settings.CharSet.ASCII, "dark_mode": False}
             }
             settings.write(temp_settings_file)
     except FileExistsError:
@@ -116,18 +108,14 @@ def main() -> None:
             settings.write(settings_file)
 
         def variant_infobox(variant: module) -> None:
-            user_input: Optional[str] = None
+            user_input: str = input(
+                f"|{variant.LONG_NAME}\n|\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
+                if variant.INVENTOR is None
+                else f"|{variant.LONG_NAME}\n|\n|Inventor: {variant.INVENTOR}\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
+            )
             menu.clear_screen()
             while user_input not in frozenset({"N", "Y"}):
-                user_input = input(
-                    (
-                        f"|{variant.LONG_NAME}\n|\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
-                        if variant.INVENTOR is None
-                        else f"|{variant.LONG_NAME}\n|\n|Inventor: {variant.INVENTOR}\n|Programmer: {variant.PROGRAMMER}\n|\n|{variant.DESCRIPTION}\n\nWould you like to play this variant (Y/N)? "
-                    )
-                    if user_input is None
-                    else 'Type either "Y" or "N". '
-                )
+                user_input = input('Type either "Y" or "N". ')
             if user_input == "Y":
                 variant.main()
 
@@ -197,10 +185,10 @@ def main() -> None:
                     if variant.SETTINGS_MENU is not None
                 }
                 | {
-                    str(variant_id + 1): menu.MenuOption(
+                    str(variant_id): menu.MenuOption(
                         variant.SHORT_NAME, variant.SETTINGS_MENU
                     )
-                    for variant_id, variant in enumerate(user_variants.values())
+                    for variant_id, variant in enumerate(user_variants.values(), 1)
                     if variant.SETTINGS_MENU is not None
                 }
                 | BACK_OPTION_DICT,
@@ -215,12 +203,11 @@ def main() -> None:
                     menu.StaticMenu(
                         "PLAY VARIANT",
                         {
-                            str(variant_id + 1): menu.MenuOption(
-                                variant_module.SHORT_NAME,
-                                partial(variant_infobox, variant_module),
+                            str(variant_id): menu.MenuOption(
+                                variant.SHORT_NAME, partial(variant_infobox, variant)
                             )
-                            for variant_id, variant_module in enumerate(
-                                user_variants.values()
+                            for variant_id, variant in enumerate(
+                                user_variants.values(), 1
                             )
                         }
                         | {"<": menu.BACK_OPTION},
